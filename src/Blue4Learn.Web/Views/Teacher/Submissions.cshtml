@@ -1,0 +1,63 @@
+@model SubmissionListViewModel
+@{
+    ViewData["Title"] = "Atividades enviadas";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.ClassName</p>
+        <h1>Atividades e evidências</h1>
+        <p class="section-lead">Comente a entrega do estudante sem expor a reflexão privada para a turma.</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Dashboard">Voltar ao painel</a>
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="soft-panel">
+        <p class="mb-0 text-muted">Ainda não há atividades enviadas.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive soft-panel">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Estudante</th>
+                    <th>Aula</th>
+                    <th>Status</th>
+                    <th>Anexos</th>
+                    <th>Atualizado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.StudentName</td>
+                    <td>
+                        <strong>@item.LessonTitle</strong>
+                        <div class="small text-muted">@item.ActivityTitle</div>
+                    </td>
+                    <td>
+                        <span class="status-pill @(item.Status == ActivityStatus.Reviewed ? "status-published" : "status-draft")">
+                            @item.Status
+                        </span>
+                        @if (item.HasFeedback)
+                        {
+                            <div class="small text-muted">com feedback</div>
+                        }
+                    </td>
+                    <td>@item.AttachmentCount</td>
+                    <td class="small text-muted">@item.UpdatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-primary" asp-action="Review" asp-route-id="@item.SubmissionId">Revisar</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

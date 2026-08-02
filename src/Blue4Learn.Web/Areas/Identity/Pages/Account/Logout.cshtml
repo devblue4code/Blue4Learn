@@ -1,0 +1,13 @@
+@page
+@model Blue4Learn.Web.Areas.Identity.Pages.Account.LogoutModel
+@{
+    ViewData["Title"] = "Sair";
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+}
+
+<p class="auth-eyebrow">Sessão</p>
+<h1 class="auth-title">Sair da conta</h1>
+<p class="auth-subtitle">Confirme para encerrar sua sessão com segurança.</p>
+<form method="post">
+    <button type="submit" class="btn btn-primary auth-submit w-100">Sair agora</button>
+</form>

@@ -1,0 +1,260 @@
+@model LessonEditorViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Editar aula" : "Nova aula";
+    var conceptNames = (Model.ConceptsText ?? string.Empty)
+        .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .ToList();
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Publicação Markdown</p>
+        <h1>@(Model.IsEdit ? Model.Title : "Nova aula")</h1>
+        <p class="section-lead">Defina conteúdo, conceitos e atividade — o aluno usa isso no Workspace.</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Index">Voltar à lista</a>
+</div>
+
+<form asp-action="Save" method="post" enctype="multipart/form-data" id="lesson-editor-form" class="editor-shell">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ConceptsText" id="ConceptsText" />
+
+    <section class="soft-panel mb-3 pub-section">
+        <div class="pub-section-head">
+            <h2>Dados da aula</h2>
+            <p>Identificação e publicação.</p>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" id="Title" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Slug" class="form-label"></label>
+                <input asp-for="Slug" class="form-control" placeholder="gerado-automaticamente" />
+                <span asp-validation-for="Slug" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="SortOrder" class="form-label"></label>
+                <input asp-for="SortOrder" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ModuleId" class="form-label"></label>
+                <select asp-for="ModuleId" class="form-select"
+                        asp-items="@(new SelectList(Model.Modules, nameof(ModuleOptionViewModel.Id), nameof(ModuleOptionViewModel.Title)))">
+                </select>
+                <span asp-validation-for="ModuleId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" class="form-select"
+                        asp-items="Html.GetEnumSelectList<ContentStatus>()">
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="MarkdownFile" class="form-label"></label>
+                <input asp-for="MarkdownFile" class="form-control" accept=".md,.markdown,text/markdown" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Objective" class="form-label"></label>
+                <input asp-for="Objective" class="form-control" id="Objective" />
+                <span asp-validation-for="Objective" class="text-danger small"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="soft-panel mb-3 pub-section" id="conceitos">
+        <div class="pub-section-head">
+            <div>
+                <h2>Conceitos desta aula</h2>
+                <p>Estes conceitos aparecem no <strong>Meu registro</strong> do aluno para marcar e indicar compreensão.</p>
+            </div>
+            @if (Model.AiEnabled)
+            {
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btn-suggest-concepts">
+                    Sugerir a partir do Markdown
+                </button>
+            }
+        </div>
+
+        <div class="concept-editor">
+            <div class="concept-editor-add">
+                <input type="text" id="concept-input" class="form-control"
+                       placeholder="Ex.: HTTP, Flexbox, Requisição" maxlength="80" autocomplete="off" />
+                <button type="button" class="btn btn-primary" id="btn-add-concept">Adicionar</button>
+            </div>
+            <div class="concept-chips" id="concept-chips" aria-live="polite">
+                @foreach (var name in conceptNames)
+                {
+                    <span class="concept-chip" data-name="@name">
+                        @name
+                        <button type="button" class="concept-chip-remove" aria-label="Remover @name">&times;</button>
+                    </span>
+                }
+            </div>
+            <p class="ws-hint mb-0" id="concept-empty" style="@(conceptNames.Count == 0 ? null : "display:none")">
+                Nenhum conceito ainda. Adicione manualmente ou peça uma sugestão a partir do Markdown.
+            </p>
+            <p class="small text-muted mt-2 mb-0" id="suggest-status" hidden></p>
+        </div>
+    </section>
+
+    <section class="soft-panel mb-3 pub-section">
+        <div class="pub-section-head">
+            <h2>Atividade e evidência</h2>
+            <p>Enunciado que o aluno vê no Workspace para enviar a prática.</p>
+        </div>
+        <label asp-for="ActivityPrompt" class="form-label"></label>
+        <textarea asp-for="ActivityPrompt" class="form-control" rows="3"
+                  placeholder="Descreva o problema, a solução e anexe o link do repositório."></textarea>
+    </section>
+
+    <div class="editor-grid">
+        <section class="soft-panel editor-pane">
+            <div class="editor-toolbar">
+                <h2 class="h6 mb-0">Markdown</h2>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-preview">Atualizar preview</button>
+            </div>
+            <textarea asp-for="Markdown" class="form-control markdown-input" id="Markdown" rows="22" spellcheck="true"></textarea>
+            <span asp-validation-for="Markdown" class="text-danger small"></span>
+        </section>
+        <section class="soft-panel preview-pane">
+            <div class="editor-toolbar">
+                <h2 class="h6 mb-0">Preview</h2>
+                <span class="small text-muted">como o estudante verá</span>
+            </div>
+            <div class="markdown-body" id="markdown-preview">
+                @Html.Raw(Model.PreviewHtml)
+            </div>
+        </section>
+    </div>
+
+    <div class="editor-actions">
+        <button type="submit" class="btn btn-primary btn-lg">Salvar aula</button>
+        @if (Model.IsEdit)
+        {
+            <a class="btn btn-outline-primary btn-lg" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.Id">
+                Ver como estudante
+            </a>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const form = document.getElementById("lesson-editor-form");
+            const preview = document.getElementById("markdown-preview");
+            const markdown = document.getElementById("Markdown");
+            const objective = document.getElementById("Objective");
+            const btn = document.getElementById("btn-preview");
+            const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+            const conceptsHidden = document.getElementById("ConceptsText");
+            const chips = document.getElementById("concept-chips");
+            const empty = document.getElementById("concept-empty");
+            const input = document.getElementById("concept-input");
+            const addBtn = document.getElementById("btn-add-concept");
+            const suggestBtn = document.getElementById("btn-suggest-concepts");
+            const suggestStatus = document.getElementById("suggest-status");
+
+            function currentConcepts() {
+                return [...chips.querySelectorAll(".concept-chip")].map((el) => el.dataset.name);
+            }
+
+            function syncHidden() {
+                conceptsHidden.value = currentConcepts().join("\n");
+                empty.style.display = currentConcepts().length ? "none" : "";
+            }
+
+            function addConcept(name) {
+                const clean = (name || "").trim();
+                if (!clean) return;
+                const exists = currentConcepts().some((c) => c.toLowerCase() === clean.toLowerCase());
+                if (exists) return;
+                const chip = document.createElement("span");
+                chip.className = "concept-chip";
+                chip.dataset.name = clean;
+                chip.innerHTML = `${clean}<button type="button" class="concept-chip-remove" aria-label="Remover ${clean}">&times;</button>`;
+                chips.appendChild(chip);
+                syncHidden();
+            }
+
+            chips.addEventListener("click", (e) => {
+                const btnRemove = e.target.closest(".concept-chip-remove");
+                if (!btnRemove) return;
+                btnRemove.closest(".concept-chip")?.remove();
+                syncHidden();
+            });
+
+            addBtn.addEventListener("click", () => {
+                addConcept(input.value);
+                input.value = "";
+                input.focus();
+            });
+
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    addBtn.click();
+                }
+            });
+
+            async function refreshPreview() {
+                const body = new URLSearchParams();
+                body.set("Markdown", markdown.value);
+                body.set("__RequestVerificationToken", token);
+                const res = await fetch("@Url.Action("Preview")", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body
+                });
+                preview.innerHTML = await res.text();
+                if (window.hljs) {
+                    preview.querySelectorAll("pre code").forEach((block) => window.hljs.highlightElement(block));
+                }
+            }
+
+            btn.addEventListener("click", refreshPreview);
+            let timer;
+            markdown.addEventListener("input", () => {
+                clearTimeout(timer);
+                timer = setTimeout(refreshPreview, 700);
+            });
+
+            if (suggestBtn) {
+                suggestBtn.addEventListener("click", async () => {
+                    suggestStatus.hidden = false;
+                    suggestStatus.textContent = "Analisando o Markdown…";
+                    suggestBtn.disabled = true;
+                    try {
+                        const body = new URLSearchParams();
+                        body.set("Markdown", markdown.value);
+                        body.set("Objective", objective.value);
+                        body.set("__RequestVerificationToken", token);
+                        const res = await fetch("@Url.Action("SuggestConcepts")", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            body
+                        });
+                        const data = await res.json();
+                        const list = data.concepts || [];
+                        list.forEach(addConcept);
+                        suggestStatus.textContent = list.length
+                            ? `${list.length} sugestão(ões) adicionada(s). Revise e remova o que não fizer sentido.`
+                            : "Nenhuma sugestão encontrada. Ajuste o Markdown ou adicione manualmente.";
+                    } catch {
+                        suggestStatus.textContent = "Não foi possível sugerir agora.";
+                    } finally {
+                        suggestBtn.disabled = false;
+                    }
+                });
+            }
+
+            form.addEventListener("submit", syncHidden);
+            syncHidden();
+        })();
+    </script>
+}

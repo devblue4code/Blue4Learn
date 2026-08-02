@@ -1,0 +1,104 @@
+@model ClassDetailsViewModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.CourseTitle</p>
+        <h1>@Model.Name</h1>
+        <p class="section-lead">
+            Código de entrada: <code class="fs-6">@Model.Code</code>
+            · estudantes podem usar <a asp-action="Join">Entrar com código</a>
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Editar</a>
+        <a class="btn btn-outline-primary" asp-action="Index">Todas as turmas</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <section class="soft-panel">
+            <h2 class="h5 mb-3">Membros (@Model.Members.Count)</h2>
+            @if (!Model.Members.Any())
+            {
+                <p class="text-muted mb-0">Ninguém matriculado ainda.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Papel</th>
+                                <th>Desde</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var m in Model.Members)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@m.FullName</strong>
+                                    <div class="small text-muted">@m.Email</div>
+                                </td>
+                                <td>@m.RoleLabel</td>
+                                <td class="small text-muted">@m.EnrolledAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                <td class="text-end">
+                                    @if (m.CanRemove)
+                                    {
+                                        <form asp-action="Unenroll" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="enrollmentId" value="@m.EnrollmentId" />
+                                            <input type="hidden" name="classGroupId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-sm btn-link text-danger"
+                                                    onclick="return confirm('Remover esta matrícula?');">
+                                                Remover
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+
+    <div class="col-lg-5">
+        <form asp-action="Enroll" method="post" class="soft-panel">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="EnrollForm.ClassGroupId" />
+            <h2 class="h5">Matricular participante</h2>
+            <p class="small text-muted">Se o e-mail não existir, criamos a conta com senha <code>Demo@123</code>.</p>
+
+            <div class="mb-3">
+                <label asp-for="EnrollForm.Email" class="form-label"></label>
+                <input asp-for="EnrollForm.Email" class="form-control" placeholder="aluno@escola.edu.br" />
+                <span asp-validation-for="EnrollForm.Email" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="EnrollForm.FullName" class="form-label"></label>
+                <input asp-for="EnrollForm.FullName" class="form-control" placeholder="Nome completo" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="EnrollForm.Role" class="form-label"></label>
+                <select asp-for="EnrollForm.Role" class="form-select">
+                    <option value="@AppRoles.Student">@AppRoles.Student</option>
+                    <option value="@AppRoles.Teacher">@AppRoles.Teacher</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Matricular</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

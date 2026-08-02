@@ -1,0 +1,43 @@
+@model LessonWorkspaceViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<article class="ws ws-page">
+    <partial name="_WorkspaceHeader" model="Model" />
+
+    <section class="content-pane soft-panel ws-panel">
+        <div class="ws-panel-head">
+            <h2>Conteúdo da aula</h2>
+            <p>Leia com calma. No fim, siga o próximo passo do seu processo.</p>
+        </div>
+        <div class="markdown-body">
+            @Html.Raw(Model.ContentHtml)
+        </div>
+
+        <partial name="_WorkspaceNextStep" model="Model" />
+
+        <nav class="lesson-nav">
+            @if (Model.PreviousLessonId is Guid prev)
+            {
+                <a class="btn btn-outline-primary" asp-action="Workspace" asp-route-id="@prev">← Aula anterior</a>
+            }
+            else
+            {
+                <span></span>
+            }
+            @if (Model.NextLessonId is Guid next && Model.NextStepKey != "next")
+            {
+                <a class="btn btn-outline-primary" asp-action="Workspace" asp-route-id="@next">Próxima aula →</a>
+            }
+            else if (Model.NextStepKey == "progress")
+            {
+                <a class="btn btn-outline-primary" asp-controller="Progress" asp-action="Index">Ver meu diário</a>
+            }
+            else
+            {
+                <span></span>
+            }
+        </nav>
+    </section>
+</article>

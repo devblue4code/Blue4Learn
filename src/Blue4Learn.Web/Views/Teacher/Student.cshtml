@@ -1,0 +1,78 @@
+@model StudentDetailViewModel
+@{
+    ViewData["Title"] = Model.FullName;
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Visão individual</p>
+        <h1>@Model.FullName</h1>
+        <p class="section-lead">@Model.Email · registros privados para orientar o acompanhamento.</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Dashboard">Voltar ao painel</a>
+</div>
+
+@if (!Model.Records.Any())
+{
+    <div class="soft-panel">
+        <p class="mb-0 text-muted">Este estudante ainda não registrou aulas.</p>
+    </div>
+}
+else
+{
+    <div class="timeline">
+        @foreach (var record in Model.Records)
+        {
+            <article class="soft-panel timeline-item">
+                <div class="d-flex justify-content-between gap-2 flex-wrap align-items-start">
+                    <h2 class="h5 mb-2">@record.LessonTitle</h2>
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        @if (record.NeedsReview)
+                        {
+                            <span class="prog-chip is-warn">Precisa revisar</span>
+                        }
+                        @if (record.ActivityStatus == ActivityStatus.Submitted)
+                        {
+                            <span class="prog-chip is-warn">Aguarda feedback</span>
+                        }
+                        else if (record.ActivityStatus == ActivityStatus.Reviewed)
+                        {
+                            <span class="prog-chip">Atividade corrigida</span>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(record.Note))
+                {
+                    <p><strong>Anotação:</strong> @record.Note</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(record.Reflection))
+                {
+                    <p><strong>Reflexão:</strong> @record.Reflection</p>
+                }
+                @if (record.Concepts.Any())
+                {
+                    <p class="mb-1"><strong>Conceitos:</strong> @string.Join(", ", record.Concepts)</p>
+                }
+                @if (record.Questions.Any())
+                {
+                    <ul class="mb-3">
+                        @foreach (var q in record.Questions)
+                        {
+                            <li>@q</li>
+                        }
+                    </ul>
+                }
+                <div class="teach-record-links">
+                    <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@record.LessonId">Abrir aula</a>
+                    <a asp-controller="Lessons" asp-action="Journal" asp-route-id="@record.LessonId">Ver registro na aula</a>
+                    @if (record.SubmissionId is Guid submissionId)
+                    {
+                        <a asp-action="Review" asp-route-id="@submissionId">
+                            @(record.ActivityStatus == ActivityStatus.Submitted ? "Dar feedback" : "Ver envio")
+                        </a>
+                    }
+                </div>
+            </article>
+        }
+    </div>
+}

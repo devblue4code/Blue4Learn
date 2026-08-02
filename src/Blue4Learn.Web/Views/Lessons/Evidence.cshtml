@@ -1,0 +1,101 @@
+@model LessonWorkspaceViewModel
+@{
+    ViewData["Title"] = $"Evidências · {Model.Title}";
+    var activity = Model.Activity;
+    var isReviewed = activity?.Status == ActivityStatus.Reviewed;
+    string ActivityStatusLabel(ActivityStatus status) => status switch
+    {
+        ActivityStatus.NotStarted => "Não iniciada",
+        ActivityStatus.InProgress => "Em andamento",
+        ActivityStatus.Submitted => "Enviada",
+        ActivityStatus.Reviewed => "Corrigida",
+        _ => status.ToString()
+    };
+}
+
+<article class="ws ws-page">
+    <partial name="_WorkspaceHeader" model="Model" />
+
+    @if (activity is null)
+    {
+        <section class="soft-panel ws-panel ws-page-form">
+            <div class="ws-panel-head">
+                <h2>Evidências</h2>
+                <p>Esta aula ainda não tem atividade para anexar evidências.</p>
+            </div>
+            <a class="btn btn-outline-primary" asp-action="Workspace" asp-route-id="@Model.LessonId">Voltar ao conteúdo</a>
+        </section>
+    }
+    else
+    {
+        <form asp-action="SaveActivity" method="post" enctype="multipart/form-data"
+              class="soft-panel activity-form ws-panel ws-page-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="lessonId" value="@Model.LessonId" />
+            <input type="hidden" name="returnTo" value="evidence" />
+            <input type="hidden" name="ActivityId" value="@activity.ActivityId" />
+            <input type="hidden" name="ProblemDescription" value="@activity.ProblemDescription" />
+            <input type="hidden" name="SolutionDescription" value="@activity.SolutionDescription" />
+
+            <div class="ws-panel-head">
+                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                    <div>
+                        <h2>Evidências</h2>
+                        <p>Links, texto e anexos que mostram o seu processo.</p>
+                    </div>
+                    <span class="prog-chip @(isReviewed ? null : activity.Status == ActivityStatus.Submitted ? "is-warn" : "is-muted")">
+                        @ActivityStatusLabel(activity.Status)
+                    </span>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(activity.TeacherFeedback))
+            {
+                <div class="callout callout-feedback mb-3">
+                    <strong>Feedback da professora</strong>
+                    <p class="mb-0">@activity.TeacherFeedback</p>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label" for="TextResponse">Resposta / evidência textual</label>
+                <textarea id="TextResponse" name="TextResponse" class="form-control" rows="4"
+                          @(isReviewed ? "disabled" : null)>@activity.TextResponse</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="GitHubUrl">Link do GitHub</label>
+                <input id="GitHubUrl" name="GitHubUrl" class="form-control" value="@activity.GitHubUrl"
+                       placeholder="https://github.com/..." @(isReviewed ? "disabled" : null) />
+            </div>
+            @if (!isReviewed)
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="Attachment">Anexo (pdf, imagem, zip, md — até 5 MB)</label>
+                    <input id="Attachment" name="Attachment" type="file" class="form-control"
+                           accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.zip" />
+                </div>
+            }
+            @if (activity.Attachments.Any())
+            {
+                <ul class="attachment-list mb-3">
+                    @foreach (var file in activity.Attachments)
+                    {
+                        <li>
+                            <a asp-controller="Files" asp-action="Attachment" asp-route-id="@file.Id">@file.FileName</a>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (!isReviewed)
+            {
+                <button type="submit" class="btn btn-teal">Enviar evidência</button>
+            }
+        </form>
+
+        @if (Model.NextStepKey != "evidence")
+        {
+            <partial name="_WorkspaceNextStep" model="Model" />
+        }
+    }
+</article>

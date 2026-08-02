@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "Entrar") · Blue4Learn</title>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
+    <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
+    <link rel="apple-touch-icon" href="~/favicon-32.png" asp-append-version="true" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
+</head>
+<body class="auth-body">
+    <div class="auth-shell">
+        <aside class="auth-brand" aria-hidden="false">
+            <div class="auth-brand-inner">
+                <a class="auth-logo" asp-controller="Home" asp-action="Index">
+                    <span class="brand-mark">B4</span>
+                    <span class="brand-text">Blue4Learn</span>
+                </a>
+                <p class="auth-kicker">Blue4Code</p>
+                <h1 class="auth-headline">Diário de bordo digital</h1>
+                <p class="auth-lead">
+                    Estude, registre dúvidas e transforme cada prática em evidência de aprendizagem.
+                </p>
+                <ul class="auth-points">
+                    <li>Conteúdo da aula no celular ou no computador</li>
+                    <li>Registro privado do seu processo</li>
+                    <li>Acompanhamento pedagógico com clareza</li>
+                </ul>
+            </div>
+            <div class="auth-orbit" aria-hidden="true"></div>
+            <div class="auth-glow" aria-hidden="true"></div>
+        </aside>
+
+        <section class="auth-panel">
+            <div class="auth-panel-inner">
+                @RenderBody()
+            </div>
+            <p class="auth-footnote">
+                <a asp-controller="Home" asp-action="Index">Voltar ao início</a>
+                <span aria-hidden="true">·</span>
+                <a asp-controller="Home" asp-action="Privacy">Privacidade</a>
+            </p>
+        </section>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/auth.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

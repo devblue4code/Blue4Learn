@@ -1,0 +1,181 @@
+@model HomeDashboardViewModel
+@{
+    ViewData["Title"] = "Início";
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12
+        ? "Bom dia"
+        : hour < 18
+            ? "Boa tarde"
+            : "Boa noite";
+}
+
+<section class="dash-hero">
+    <div class="dash-hero-copy">
+        <p class="eyebrow">@greeting, @Model.FirstName</p>
+        <h1>@(Model.IsTeacher ? "Sua visão da turma" : "O que estudar agora")</h1>
+        <p class="section-lead">
+            @(Model.IsTeacher
+                ? "Acompanhe registros e intervenha com base no processo dos estudantes."
+                : "Abra uma aula, registre o que compreendeu e deixe evidências do seu caminho.")
+        </p>
+
+        <div class="dash-actions">
+            @if (Model.NextLesson is not null)
+            {
+                <a class="btn btn-primary" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.NextLesson.Id">
+                    @(Model.NextLesson.HasJournal ? "Continuar" : "Começar") · @Model.NextLesson.Title
+                </a>
+            }
+            <a class="btn btn-outline-primary" asp-controller="Progress" asp-action="Index">Meu diário</a>
+            @if (Model.IsTeacher)
+            {
+                <a class="btn btn-outline-primary" asp-controller="Teacher" asp-action="Dashboard">Painel da professora</a>
+            }
+            else
+            {
+                <a class="btn btn-outline-primary" asp-controller="Classes" asp-action="Join">Entrar com código</a>
+            }
+        </div>
+    </div>
+
+    <aside class="dash-progress-card" aria-label="Seu progresso">
+        <div class="dash-progress-top">
+            <span>Seu ritmo</span>
+            <strong>@Model.ProgressPercent%</strong>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" style="width: @Model.ProgressPercent%"></div>
+        </div>
+        <div class="dash-progress-stats">
+            <div>
+                <strong>@Model.RegisteredCount</strong>
+                <span>registradas</span>
+            </div>
+            <div>
+                <strong>@Model.PendingCount</strong>
+                <span>pendentes</span>
+            </div>
+            <div>
+                <strong>@Model.NeedsReviewCount</strong>
+                <span>revisar</span>
+            </div>
+        </div>
+        @if (Model.NextLesson is not null)
+        {
+            <p class="dash-next-hint">
+                Próximo passo:
+                <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.NextLesson.Id">@Model.NextLesson.Title</a>
+            </p>
+        }
+    </aside>
+</section>
+
+@if (Model.Classes.Any())
+{
+    <section class="dash-section">
+        <div class="dash-section-head">
+            <div>
+                <h2>Minhas turmas</h2>
+                <p>Onde você estuda e acompanha a disciplina.</p>
+            </div>
+            @if (Model.IsTeacher)
+            {
+                <a asp-controller="Classes" asp-action="Index">Gerenciar turmas</a>
+            }
+            else
+            {
+                <a asp-controller="Classes" asp-action="Join">Entrar com código</a>
+            }
+        </div>
+        <div class="dash-class-grid">
+            @foreach (var c in Model.Classes)
+            {
+                <article class="dash-class-card">
+                    <div class="dash-class-top">
+                        @if (Model.IsTeacher)
+                        {
+                            <span class="dash-class-code" title="Código de matrícula da turma">@c.Code</span>
+                        }
+                        else
+                        {
+                            <span class="dash-class-enrolled">Matriculado</span>
+                        }
+                        <span class="dash-class-count">@c.StudentCount participantes</span>
+                    </div>
+                    <h3>@c.Name</h3>
+                    <p>@c.CourseTitle</p>
+                    @if (Model.IsTeacher)
+                    {
+                        <a class="dash-class-link" asp-controller="Classes" asp-action="Details" asp-route-id="@c.Id">Ver membros</a>
+                    }
+                    else
+                    {
+                        <a class="dash-class-link" asp-controller="Lessons" asp-action="Index">Abrir conteúdos</a>
+                    }
+                </article>
+            }
+        </div>
+    </section>
+}
+
+<section class="dash-section">
+    <div class="dash-section-head">
+        <div>
+            <h2>Aulas publicadas</h2>
+            <p>Continue pelo próximo passo ou revise o que já registrou.</p>
+        </div>
+        <a asp-controller="Lessons" asp-action="Index">Ver todas</a>
+    </div>
+
+    @if (!Model.RecentLessons.Any())
+    {
+        <div class="soft-panel dash-empty">
+            <h3>Nenhuma aula publicada ainda</h3>
+            <p class="mb-0 text-muted">
+                @(Model.IsTeacher
+                    ? "Publique o primeiro Markdown para a turma começar."
+                    : "Quando a professora publicar, as aulas aparecem aqui.")
+            </p>
+            @if (Model.IsTeacher)
+            {
+                <a class="btn btn-primary mt-3" asp-controller="Content" asp-action="Create">Publicar aula</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="lesson-list">
+            @foreach (var lesson in Model.RecentLessons)
+            {
+                <a class="lesson-row @(lesson.IsNext ? "is-next" : "")"
+                   asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lesson.Id">
+                    <span class="lesson-order">@lesson.SortOrder</span>
+                    <span class="lesson-meta">
+                        <strong>
+                            @lesson.Title
+                            @if (lesson.IsNext)
+                            {
+                                <span class="lesson-next-chip">Próximo</span>
+                            }
+                        </strong>
+                        <small>@lesson.ModuleTitle · @lesson.Objective</small>
+                    </span>
+                    <span class="lesson-status @(lesson.HasJournal ? (lesson.NeedsReview ? "" : "is-done") : "")">
+                        @if (!lesson.HasJournal)
+                        {
+                            <text>Registrar</text>
+                        }
+                        else if (lesson.NeedsReview)
+                        {
+                            <text>Revisar</text>
+                        }
+                        else
+                        {
+                            <text>Registrado</text>
+                        }
+                    </span>
+                </a>
+            }
+        </div>
+    }
+</section>

@@ -1,0 +1,12 @@
+@model string?
+@{
+    var message = Model;
+    var isError = !string.IsNullOrEmpty(message) && message.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-soft" role="alert">
+        @(isError ? message[5..].TrimStart(' ', ':') : message)
+    </div>
+}

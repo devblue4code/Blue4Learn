@@ -1,0 +1,45 @@
+@model ClassFormViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Editar turma" : "Nova turma";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Turmas</p>
+        <h1>@(Model.IsEdit ? "Editar turma" : "Nova turma")</h1>
+        <p class="section-lead">O código serve para o estudante entrar sozinho ou para você matricular por e-mail.</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Index">Voltar</a>
+</div>
+
+<form asp-action="Save" method="post" class="soft-panel" style="max-width: 640px">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" placeholder="Turma PW-2026.2" />
+        <span asp-validation-for="Name" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Code" class="form-label"></label>
+        <input asp-for="Code" class="form-control" placeholder="PW262" />
+        <span asp-validation-for="Code" class="text-danger small"></span>
+        <div class="form-text">Será salvo em maiúsculas. Ex.: PW262</div>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="CourseId" class="form-label"></label>
+        <select asp-for="CourseId" class="form-select"
+                asp-items="@(new SelectList(Model.Courses, nameof(CourseOptionViewModel.Id), nameof(CourseOptionViewModel.Title)))">
+        </select>
+        <span asp-validation-for="CourseId" class="text-danger small"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">@(Model.IsEdit ? "Salvar alterações" : "Criar turma")</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

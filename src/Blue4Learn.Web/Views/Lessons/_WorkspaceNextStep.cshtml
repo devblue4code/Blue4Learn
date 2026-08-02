@@ -1,0 +1,28 @@
+@model LessonWorkspaceViewModel
+
+<aside class="ws-next-step" aria-label="Próximo passo">
+    <div>
+        <p class="ws-next-kicker">Próximo passo</p>
+        <strong>@Model.NextStepLabel</strong>
+    </div>
+    <div class="ws-next-actions">
+        @switch (Model.NextStepKey)
+        {
+            case "journal":
+                <a class="btn btn-primary" asp-action="Journal" asp-route-id="@Model.LessonId">@Model.NextStepLabel</a>
+                break;
+            case "activity":
+                <a class="btn btn-primary" asp-action="Activity" asp-route-id="@Model.LessonId">@Model.NextStepLabel</a>
+                break;
+            case "evidence":
+                <a class="btn btn-primary" asp-action="Evidence" asp-route-id="@Model.LessonId">@Model.NextStepLabel</a>
+                break;
+            case "next":
+                <a class="btn btn-primary" asp-action="Workspace" asp-route-id="@Model.NextLessonId">@Model.NextStepLabel</a>
+                break;
+            default:
+                <a class="btn btn-primary" asp-controller="Progress" asp-action="Index">@Model.NextStepLabel</a>
+                break;
+        }
+    </div>
+</aside>

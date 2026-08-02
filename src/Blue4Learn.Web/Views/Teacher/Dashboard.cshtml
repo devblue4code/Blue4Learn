@@ -1,0 +1,274 @@
+@model TeacherDashboardViewModel
+@{
+    ViewData["Title"] = "Painel da professora";
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12
+        ? "Bom dia"
+        : hour < 18
+            ? "Boa tarde"
+            : "Boa noite";
+    var attentionCount = Model.OpenQuestions + Model.AwaitingFeedback + Model.NeedsReviewJournals;
+}
+
+@if (!Model.HasClass)
+{
+    <section class="dash-hero">
+        <div class="dash-hero-copy" style="grid-column: 1 / -1;">
+            <p class="eyebrow">@greeting, @Model.FirstName</p>
+            <h1>Painel da professora</h1>
+            <p class="section-lead">Crie ou entre em uma turma para acompanhar registros, dúvidas e atividades.</p>
+            <div class="dash-actions">
+                <a class="btn btn-primary" asp-controller="Classes" asp-action="Create">Criar turma</a>
+                <a class="btn btn-outline-primary" asp-controller="Classes" asp-action="Index">Ver turmas</a>
+            </div>
+        </div>
+    </section>
+}
+else
+{
+    <section class="dash-hero teach-hero">
+        <div class="dash-hero-copy">
+            <p class="eyebrow">@greeting, @Model.FirstName</p>
+            <h1>@Model.ClassName</h1>
+            <p class="section-lead">
+                @Model.CourseTitle · use os registros para decidir o que retomar, aprofundar ou reorganizar.
+            </p>
+
+            <div class="teach-class-meta">
+                <span class="dash-class-code">@Model.ClassCode</span>
+                <span>@Model.StudentCount participantes</span>
+                <span>@Model.PublishedLessons aulas publicadas</span>
+            </div>
+
+            <div class="dash-actions">
+                @if (Model.AwaitingFeedback > 0)
+                {
+                    <a class="btn btn-primary" asp-action="Submissions">
+                        Revisar atividades · @Model.AwaitingFeedback
+                    </a>
+                }
+                else if (Model.OpenQuestions > 0)
+                {
+                    <a class="btn btn-primary" href="#duvidas">Ver dúvidas · @Model.OpenQuestions</a>
+                }
+                else
+                {
+                    <a class="btn btn-primary" asp-controller="Content" asp-action="Index">Publicar Markdown</a>
+                }
+                <a class="btn btn-outline-primary" asp-action="Submissions">Atividades</a>
+                <a class="btn btn-outline-primary" asp-controller="Classes" asp-action="Details" asp-route-id="@Model.ClassId">Membros</a>
+                <a class="btn btn-outline-primary" asp-controller="Content" asp-action="Index">Conteúdos</a>
+            </div>
+        </div>
+
+        <aside class="dash-progress-card" aria-label="Cobertura da turma">
+            <div class="dash-progress-top">
+                <span>Cobertura</span>
+                <strong>@Model.CoveragePercent%</strong>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: @Model.CoveragePercent%"></div>
+            </div>
+            <div class="dash-progress-stats">
+                <div>
+                    <strong>@Model.OpenQuestions</strong>
+                    <span>dúvidas</span>
+                </div>
+                <div>
+                    <strong>@Model.AwaitingFeedback</strong>
+                    <span>para feedback</span>
+                </div>
+                <div>
+                    <strong>@Model.PendingJournals</strong>
+                    <span>pendentes</span>
+                </div>
+            </div>
+            <p class="dash-next-hint">
+                @(attentionCount > 0
+                    ? $"{attentionCount} ponto(s) pedindo atenção agora."
+                    : "Turma em dia — bom momento para aprofundar.")
+            </p>
+        </aside>
+    </section>
+
+    <section class="teach-stat-grid" aria-label="Indicadores da turma">
+        <article class="teach-stat">
+            <span>Aulas publicadas</span>
+            <strong>@Model.PublishedLessons</strong>
+        </article>
+        <article class="teach-stat @(Model.OpenQuestions > 0 ? "is-alert" : null)">
+            <span>Dúvidas abertas</span>
+            <strong>@Model.OpenQuestions</strong>
+        </article>
+        <article class="teach-stat @(Model.PendingJournals > 0 ? "is-warn" : null)">
+            <span>Registros pendentes</span>
+            <strong>@Model.PendingJournals</strong>
+        </article>
+        <article class="teach-stat @(Model.AwaitingFeedback > 0 ? "is-alert" : null)">
+            <span>Aguardando feedback</span>
+            <strong>@Model.AwaitingFeedback</strong>
+        </article>
+        <article class="teach-stat">
+            <span>Atividades enviadas</span>
+            <strong>@Model.SubmittedActivities</strong>
+        </article>
+        <article class="teach-stat @(Model.NeedsReviewJournals > 0 ? "is-warn" : null)">
+            <span>Pedem revisar</span>
+            <strong>@Model.NeedsReviewJournals</strong>
+        </article>
+    </section>
+
+    <div class="teach-split">
+        <section class="soft-panel teach-panel">
+            <div class="dash-section-head">
+                <div>
+                    <h2>Conceitos mais marcados</h2>
+                    <p>Onde a turma está se apoiando — e onde ainda há dúvida.</p>
+                </div>
+            </div>
+            @if (!Model.TopConcepts.Any())
+            {
+                <div class="dash-empty">
+                    <h3>Ainda sem marcas</h3>
+                    <p class="mb-0 text-muted">Peça aos alunos para registrar a primeira aula com conceitos.</p>
+                </div>
+            }
+            else
+            {
+                <ul class="teach-concepts">
+                    @foreach (var c in Model.TopConcepts)
+                    {
+                        <li>
+                            <div class="teach-concept-top">
+                                <strong>@c.Name</strong>
+                                <span>@c.Understood/@c.Marks compreendidos</span>
+                            </div>
+                            <div class="progress-track teach-concept-bar">
+                                <div class="progress-fill" style="width: @c.UnderstoodPercent%"></div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="soft-panel teach-panel" id="duvidas">
+            <div class="dash-section-head">
+                <div>
+                    <h2>Dúvidas recentes</h2>
+                    <p>Intervenções rápidas com base no processo dos estudantes.</p>
+                </div>
+            </div>
+            @if (!Model.RecentQuestions.Any())
+            {
+                <div class="dash-empty">
+                    <h3>Nenhuma dúvida aberta</h3>
+                    <p class="mb-0 text-muted">Quando surgirem perguntas no diário, elas aparecem aqui.</p>
+                </div>
+            }
+            else
+            {
+                <ul class="teach-questions">
+                    @foreach (var q in Model.RecentQuestions)
+                    {
+                        <li>
+                            <div class="teach-q-body">
+                                <div class="teach-q-meta">
+                                    <strong>@q.StudentName</strong>
+                                    <span>@q.LessonTitle</span>
+                                    <span>@q.CreatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                                </div>
+                                <p>@q.Text</p>
+                                <div class="teach-q-links">
+                                    <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@q.LessonId">Abrir aula</a>
+                                    <a asp-action="Student" asp-route-id="@q.StudentUserId">Ver aluno</a>
+                                </div>
+                            </div>
+                            <form asp-action="ResolveQuestion" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@q.Id" />
+                                <button class="btn btn-sm btn-outline-primary" type="submit">Resolver</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+
+    <section class="dash-section">
+        <div class="dash-section-head">
+            <div>
+                <h2>Visão dos estudantes</h2>
+                <p>Quem precisa de atenção aparece primeiro.</p>
+            </div>
+            <span class="prog-count">@Model.StudentCount estudantes</span>
+        </div>
+
+        @if (!Model.Students.Any())
+        {
+            <div class="soft-panel dash-empty">
+                <h3>Nenhum estudante na turma</h3>
+                <p class="mb-0 text-muted">Compartilhe o código <strong>@Model.ClassCode</strong> ou matricule alguém.</p>
+                <a class="btn btn-primary mt-3" asp-controller="Classes" asp-action="Details" asp-route-id="@Model.ClassId">
+                    Gerenciar membros
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="teach-student-list">
+                @foreach (var s in Model.Students)
+                {
+                    <article class="teach-student @(s.NeedsAttention ? "needs-attention" : null)">
+                        <div class="teach-student-main">
+                            <div class="teach-student-head">
+                                <h3>@s.FullName</h3>
+                                @if (s.NeedsAttention)
+                                {
+                                    <span class="prog-chip is-warn">Atenção</span>
+                                }
+                                else
+                                {
+                                    <span class="prog-chip">Em dia</span>
+                                }
+                            </div>
+                            <div class="teach-student-bar">
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: @s.ProgressPercent%"></div>
+                                </div>
+                                <span>@s.JournalCount/@s.ExpectedJournals diários · @s.ProgressPercent%</span>
+                            </div>
+                            <div class="teach-student-chips">
+                                @if (s.OpenQuestions > 0)
+                                {
+                                    <span class="prog-chip is-warn">@s.OpenQuestions dúvida(s)</span>
+                                }
+                                @if (s.NeedsReviewCount > 0)
+                                {
+                                    <span class="prog-chip is-warn">@s.NeedsReviewCount revisar</span>
+                                }
+                                @if (s.AwaitingFeedback > 0)
+                                {
+                                    <span class="prog-chip is-muted">@s.AwaitingFeedback p/ feedback</span>
+                                }
+                                <span class="prog-chip">@s.SubmittedActivities atividade(s)</span>
+                            </div>
+                        </div>
+                        <div class="teach-student-actions">
+                            <a class="teach-student-link" asp-action="Student" asp-route-id="@s.UserId">Ver registro</a>
+                            @if (s.FocusLessonId is Guid lessonId)
+                            {
+                                <a class="teach-student-link is-soft" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lessonId">Abrir aula</a>
+                            }
+                            @if (s.FocusSubmissionId is Guid submissionId)
+                            {
+                                <a class="teach-student-link is-soft" asp-action="Review" asp-route-id="@submissionId">Dar feedback</a>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+}

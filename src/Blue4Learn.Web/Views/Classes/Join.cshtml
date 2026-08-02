@@ -1,0 +1,33 @@
+@model JoinClassViewModel
+@{
+    ViewData["Title"] = "Entrar em uma turma";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Matrícula</p>
+        <h1>Entrar na turma</h1>
+        <p class="section-lead">
+            O código é criado pela professora para a turma — você só usa para entrar, sem alterar nada do cadastro dela.
+        </p>
+    </div>
+</div>
+
+<form asp-action="Join" method="post" class="soft-panel" style="max-width: 420px">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <label asp-for="Code" class="form-label">Código informado pela professora</label>
+        <input asp-for="Code" class="form-control text-uppercase" placeholder="Ex.: PW261" autofocus autocomplete="off" />
+        <span asp-validation-for="Code" class="text-danger small"></span>
+        <small class="text-muted d-block mt-2">Use só para entrar. Se você já faz parte da turma, o sistema avisa e não altera nada.</small>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Confirmar matrícula</button>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Dashboard">Ir ao início</a>
+        <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Index">Ver conteúdos</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

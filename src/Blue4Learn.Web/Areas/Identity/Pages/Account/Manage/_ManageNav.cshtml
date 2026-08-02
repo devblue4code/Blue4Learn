@@ -1,0 +1,10 @@
+@{
+    var page = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    var profileActive = page.EndsWith("/Index", StringComparison.OrdinalIgnoreCase);
+    var passwordActive = page.EndsWith("/ChangePassword", StringComparison.OrdinalIgnoreCase);
+}
+
+<nav class="profile-nav" aria-label="Navegação do perfil">
+    <a class="profile-nav-link @(profileActive ? "is-active" : null)" asp-page="./Index">Perfil</a>
+    <a class="profile-nav-link @(passwordActive ? "is-active" : null)" asp-page="./ChangePassword">Senha</a>
+</nav>

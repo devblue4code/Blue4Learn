@@ -1,0 +1,222 @@
+@model LessonWorkspaceViewModel
+@{
+    ViewData["Title"] = $"Registro · {Model.Title}";
+}
+
+<article class="ws ws-page">
+    <partial name="_WorkspaceHeader" model="Model" />
+
+    <form asp-action="SaveJournal" method="post" class="soft-panel journal-form ws-panel ws-page-form" id="registro">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Journal.LessonId" />
+
+        <div class="ws-panel-head">
+            <h2>Meu registro</h2>
+            <p>Anotações do seu processo. A professora vê padrões e dúvidas, não o caderno inteiro.</p>
+        </div>
+
+        <div class="ws-ai-card" id="ai-tutor">
+            <div class="ws-ai-head">
+                <strong>Perguntas orientadoras</strong>
+                <span class="prog-chip">IA tutora</span>
+            </div>
+            <p class="ws-hint mb-2">A IA sugere perguntas para você refletir — não preenche o diário nem dá a resposta pronta.</p>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-guiding-questions"
+                    data-lesson-id="@Model.LessonId"
+                    data-url="@Url.Action("GuidingQuestions", "Lessons")">
+                Pedir perguntas orientadoras
+            </button>
+            <ul class="ws-ai-questions" id="guiding-questions" hidden></ul>
+            <p class="small text-muted mt-2 mb-0" id="guiding-status" hidden></p>
+        </div>
+
+        <div class="ws-step">
+            <span class="ws-step-n">1</span>
+            <div class="ws-step-body">
+                <label asp-for="Journal.Note" class="form-label"></label>
+                <textarea asp-for="Journal.Note" class="form-control" rows="4"
+                          placeholder="O que fez sentido nesta aula?"></textarea>
+            </div>
+        </div>
+
+        @if (Model.Concepts.Any())
+        {
+            <div class="ws-step">
+                <span class="ws-step-n">2</span>
+                <div class="ws-step-body">
+                    <label class="form-label">Conceitos</label>
+                    <p class="ws-hint">Marque os que apareceram e, à direita, se você compreendeu.</p>
+                    <div class="concept-list">
+                        <div class="concept-legend">
+                            <span>Conceito</span>
+                            <span>Compreendi</span>
+                        </div>
+                        @foreach (var concept in Model.Concepts)
+                        {
+                            <label class="concept-item">
+                                <input type="checkbox" name="Journal.MarkedConceptIds" value="@concept.Id"
+                                       @(concept.Marked ? "checked" : null) />
+                                <span>@concept.Name</span>
+                                <input type="checkbox" name="Journal.UnderstoodConceptIds" value="@concept.Id"
+                                       class="form-check-input"
+                                       title="Marquei como compreendido"
+                                       @(concept.Understood ? "checked" : null) />
+                            </label>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="ws-step">
+            <span class="ws-step-n">@(Model.Concepts.Any() ? "3" : "2")</span>
+            <div class="ws-step-body">
+                <label class="form-label">Checklist</label>
+                <div class="checklist ws-checklist">
+                    <label class="ws-check">
+                        <input asp-for="Journal.UnderstoodObjective" />
+                        <span>Compreendi o objetivo da aula</span>
+                    </label>
+                    <label class="ws-check">
+                        <input asp-for="Journal.PracticedConcept" />
+                        <span>Pratiquei o conceito principal</span>
+                    </label>
+                    <label class="ws-check is-warn-check">
+                        <input asp-for="Journal.NeedsReview" />
+                        <span>Preciso revisar este conteúdo</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="ws-step">
+            <span class="ws-step-n">@(Model.Concepts.Any() ? "4" : "3")</span>
+            <div class="ws-step-body">
+                <label asp-for="Journal.NewQuestion" class="form-label"></label>
+                <textarea asp-for="Journal.NewQuestion" class="form-control" rows="2"
+                          placeholder="Registre a dúvida para retomarmos depois."></textarea>
+
+                @if (Model.Journal.Questions.Any())
+                {
+                    <ul class="question-feed mt-3">
+                        @foreach (var q in Model.Journal.Questions)
+                        {
+                            <li class="@(q.Status == QuestionStatus.Resolved ? "is-resolved" : null)">
+                                <span class="prog-chip @(q.Status == QuestionStatus.Open ? "is-warn" : null)">
+                                    @(q.Status == QuestionStatus.Open ? "Em aberto" : "Resolvida")
+                                </span>
+                                <p>@q.Text</p>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        <div class="ws-step">
+            <span class="ws-step-n">@(Model.Concepts.Any() ? "5" : "4")</span>
+            <div class="ws-step-body">
+                <label asp-for="Journal.Reflection" class="form-label"></label>
+                <textarea asp-for="Journal.Reflection" class="form-control" rows="3"
+                          placeholder="O que você conseguiu compreender nesta aula?"></textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            @(Model.HasJournal ? "Atualizar diário" : "Salvar diário")
+        </button>
+    </form>
+
+    @if (Model.NextStepKey != "journal")
+    {
+        <partial name="_WorkspaceNextStep" model="Model" />
+    }
+</article>
+
+@section Scripts {
+    <script>
+        (() => {
+            const btn = document.getElementById("btn-guiding-questions");
+            const list = document.getElementById("guiding-questions");
+            const status = document.getElementById("guiding-status");
+            const note = document.querySelector('#registro textarea[name="Journal.Note"]');
+            if (!btn || !list) return;
+
+            const storageKey = `b4l-guiding-${btn.dataset.lessonId}`;
+
+            const useInJournal = (question) => {
+                if (!note) return;
+                const bullet = `• ${question}`;
+                const current = note.value.trim();
+                if (current.includes(bullet)) {
+                    status.hidden = false;
+                    status.textContent = "Essa pergunta já está na anotação.";
+                    note.focus();
+                    return;
+                }
+                note.value = current ? `${current}\n\n${bullet}` : bullet;
+                note.focus();
+                note.setSelectionRange(note.value.length, note.value.length);
+                status.hidden = false;
+                status.textContent = "Pergunta adicionada à anotação. Responda ali embaixo.";
+            };
+
+            const renderQuestions = (questions, message) => {
+                list.innerHTML = "";
+                questions.forEach((q) => {
+                    const li = document.createElement("li");
+                    const text = document.createElement("p");
+                    text.textContent = q;
+                    const useBtn = document.createElement("button");
+                    useBtn.type = "button";
+                    useBtn.className = "btn btn-sm btn-outline-primary ws-ai-use";
+                    useBtn.textContent = "Usar no diário";
+                    useBtn.addEventListener("click", () => useInJournal(q));
+                    li.append(text, useBtn);
+                    list.appendChild(li);
+                });
+                list.hidden = questions.length === 0;
+                status.hidden = false;
+                status.textContent = message || "Toque em “Usar no diário” para levar a pergunta à anotação.";
+            };
+
+            try {
+                const cached = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+                if (Array.isArray(cached) && cached.length) {
+                    renderQuestions(cached);
+                }
+            } catch { /* ignore */ }
+
+            const tokenInput = document.querySelector('#registro input[name="__RequestVerificationToken"]');
+            btn.addEventListener("click", async () => {
+                status.hidden = false;
+                status.textContent = "Gerando perguntas…";
+                btn.disabled = true;
+                list.hidden = true;
+                list.innerHTML = "";
+                try {
+                    const body = new URLSearchParams();
+                    body.set("LessonId", btn.dataset.lessonId);
+                    if (tokenInput) body.set("__RequestVerificationToken", tokenInput.value);
+                    const res = await fetch(btn.dataset.url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body
+                    });
+                    const data = await res.json();
+                    const questions = data.questions || [];
+                    if (!questions.length) {
+                        status.textContent = data.message || "Nenhuma pergunta no momento.";
+                        return;
+                    }
+                    try { sessionStorage.setItem(storageKey, JSON.stringify(questions)); } catch { /* ignore */ }
+                    renderQuestions(questions);
+                } catch {
+                    status.textContent = "Não foi possível gerar perguntas agora.";
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,189 @@
+@model MyProgressViewModel
+@{
+    ViewData["Title"] = "Meu diário";
+    string ActivityLabel(ActivityStatus? status) => status switch
+    {
+        ActivityStatus.NotStarted => "Atividade não iniciada",
+        ActivityStatus.InProgress => "Atividade em andamento",
+        ActivityStatus.Submitted => "Atividade enviada",
+        ActivityStatus.Reviewed => "Atividade corrigida",
+        _ => "Sem atividade"
+    };
+    string StatusLabel(MyProgressItemViewModel item)
+    {
+        if (!item.HasJournal) return "Registrar";
+        if (item.NeedsReview || item.HasOpenQuestion) return "Revisar";
+        return "Em dia";
+    }
+    string EmptyCopy = Model.Filter switch
+    {
+        "missing" => "Nada pendente por aqui — ótimo sinal.",
+        "review" => "Nenhuma aula marcada para revisar agora.",
+        "done" => "Ainda não há registros em dia neste filtro.",
+        _ => "Quando houver aulas publicadas, elas aparecem aqui."
+    };
+}
+
+<section class="dash-hero prog-hero">
+    <div class="dash-hero-copy">
+        <p class="eyebrow">Meu diário · @Model.FirstName</p>
+        <h1>Seu caminho de aprendizagem</h1>
+        <p class="section-lead">
+            Acompanhe o que já registrou, o que falta e o que você mesmo pediu para revisar.
+        </p>
+
+        <div class="dash-actions">
+            @if (Model.NextAction is not null)
+            {
+                <a class="btn btn-primary"
+                   asp-controller="Lessons"
+                   asp-action="Workspace"
+                   asp-route-id="@Model.NextAction.LessonId">
+                    @(Model.NextAction.HasJournal ? "Revisar agora" : "Registrar agora") · @Model.NextAction.Title
+                </a>
+            }
+            <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Index">Ver conteúdos</a>
+            <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Dashboard">Voltar ao início</a>
+        </div>
+    </div>
+
+    <aside class="dash-progress-card" aria-label="Progresso do diário">
+        <div class="dash-progress-top">
+            <span>Diário</span>
+            <strong>@Model.ProgressPercent%</strong>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" style="width: @Model.ProgressPercent%"></div>
+        </div>
+        <div class="dash-progress-stats">
+            <div>
+                <strong>@Model.RegisteredCount</strong>
+                <span>registradas</span>
+            </div>
+            <div>
+                <strong>@Model.MissingCount</strong>
+                <span>pendentes</span>
+            </div>
+            <div>
+                <strong>@Model.NeedsReviewCount</strong>
+                <span>revisar</span>
+            </div>
+        </div>
+        @if (Model.NextAction is not null)
+        {
+            <p class="dash-next-hint">
+                Próximo passo:
+                <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.NextAction.LessonId">
+                    @Model.NextAction.Title
+                </a>
+            </p>
+        }
+        else if (Model.TotalLessons > 0)
+        {
+            <p class="dash-next-hint">Tudo em dia por enquanto. Bom ritmo.</p>
+        }
+    </aside>
+</section>
+
+<section class="dash-section">
+    <div class="dash-section-head">
+        <div>
+            <h2>Aulas e registros</h2>
+            <p>Filtre pelo que precisa da sua atenção agora.</p>
+        </div>
+        <span class="prog-count">@Model.Items.Count de @Model.TotalLessons</span>
+    </div>
+
+    <div class="prog-filters" role="tablist" aria-label="Filtros do diário">
+        <a class="prog-filter @(Model.Filter == "all" ? "is-active" : null)"
+           asp-action="Index" asp-route-filter="all">
+            <strong>Todas</strong>
+            <span>@Model.TotalLessons</span>
+        </a>
+        <a class="prog-filter @(Model.Filter == "missing" ? "is-active" : null)"
+           asp-action="Index" asp-route-filter="missing">
+            <strong>Faltam registrar</strong>
+            <span>@Model.MissingCount</span>
+        </a>
+        <a class="prog-filter @(Model.Filter == "review" ? "is-active" : null)"
+           asp-action="Index" asp-route-filter="review">
+            <strong>Preciso revisar</strong>
+            <span>@Model.NeedsReviewCount</span>
+        </a>
+        <a class="prog-filter @(Model.Filter == "done" ? "is-active" : null)"
+           asp-action="Index" asp-route-filter="done">
+            <strong>Em dia</strong>
+            <span>@Model.DoneCount</span>
+        </a>
+    </div>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="soft-panel dash-empty">
+            <h3>Nada neste filtro</h3>
+            <p class="mb-0 text-muted">@EmptyCopy</p>
+            @if (Model.Filter != "all")
+            {
+                <a class="btn btn-outline-primary mt-3" asp-action="Index" asp-route-filter="all">Ver todas</a>
+            }
+            else if (Model.TotalLessons == 0)
+            {
+                <a class="btn btn-primary mt-3" asp-controller="Lessons" asp-action="Index">Explorar conteúdos</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="lesson-list prog-list">
+            @foreach (var item in Model.Items)
+            {
+                var statusClass = !item.HasJournal
+                    ? "is-missing"
+                    : (item.NeedsReview || item.HasOpenQuestion ? "is-review" : "is-done");
+
+                <a class="lesson-row prog-row @(item.IsNext ? "is-next" : null) @statusClass"
+                   asp-controller="Lessons"
+                   asp-action="Workspace"
+                   asp-route-id="@item.LessonId">
+                    <span class="lesson-order">@item.SortOrder</span>
+                    <span class="lesson-meta">
+                        <strong>
+                            @item.Title
+                            @if (item.IsNext)
+                            {
+                                <span class="lesson-next-chip">Próximo</span>
+                            }
+                        </strong>
+                        <small>@item.ModuleTitle</small>
+                        <span class="prog-meta-row">
+                            @if (item.LastJournalUpdateUtc is DateTime updated)
+                            {
+                                <span class="prog-chip">Atualizado @updated.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="prog-chip is-muted">Ainda sem registro</span>
+                            }
+
+                            @if (item.NeedsReview)
+                            {
+                                <span class="prog-chip is-warn">Marcada para revisar</span>
+                            }
+                            @if (item.HasOpenQuestion)
+                            {
+                                <span class="prog-chip is-warn">Pergunta em aberto</span>
+                            }
+                            @if (item.ActivityStatus is not null)
+                            {
+                                <span class="prog-chip">@ActivityLabel(item.ActivityStatus)</span>
+                            }
+                        </span>
+                    </span>
+                    <span class="lesson-status @(statusClass == "is-done" ? "is-done" : "")">
+                        @StatusLabel(item)
+                    </span>
+                </a>
+            }
+        </div>
+    }
+</section>

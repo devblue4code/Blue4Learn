@@ -1,0 +1,60 @@
+@page
+@model Blue4Learn.Web.Areas.Identity.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Entrar";
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+}
+
+<p class="auth-eyebrow">Acesso</p>
+<h1 class="auth-title">Entrar no Blue4Learn</h1>
+<p class="auth-subtitle">Use seu e-mail institucional para continuar estudando ou acompanhar a turma.</p>
+
+<form id="account" method="post" class="auth-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="auth-alert" role="alert"></div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label"></label>
+        <input asp-for="Input.Email" class="form-control" autocomplete="username" autofocus
+               placeholder="voce@escola.edu.br" />
+        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center gap-2">
+            <label asp-for="Input.Password" class="form-label mb-0"></label>
+            <a class="small" id="forgot-password" asp-page="./ForgotPassword">Esqueceu a senha?</a>
+        </div>
+        <input asp-for="Input.Password" class="form-control mt-1" autocomplete="current-password"
+               placeholder="Sua senha" />
+        <span asp-validation-for="Input.Password" class="text-danger small"></span>
+    </div>
+
+    <div class="form-check mb-3">
+        <input class="form-check-input" asp-for="Input.RememberMe" />
+        <label class="form-check-label" asp-for="Input.RememberMe"></label>
+    </div>
+
+    <div class="auth-actions">
+        <button type="submit" class="btn btn-primary auth-submit w-100">Entrar</button>
+    </div>
+</form>
+
+<div class="auth-demo">
+    <strong>Acesso rápido do protótipo</strong>
+    <div class="auth-demo-grid">
+        <button type="button" class="auth-demo-btn" data-fill-login
+                data-email="aluno@blue4learn.local" data-password="Demo@123">
+            <span>Estudante</span>
+            <code>aluno@blue4learn.local</code>
+        </button>
+        <button type="button" class="auth-demo-btn" data-fill-login
+                data-email="professora@blue4learn.local" data-password="Demo@123">
+            <span>Professora</span>
+            <code>professora@blue4learn.local</code>
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

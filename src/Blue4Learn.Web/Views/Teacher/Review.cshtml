@@ -1,0 +1,63 @@
+@model SubmissionReviewViewModel
+@{
+    ViewData["Title"] = "Revisar evidência";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Feedback da professora</p>
+        <h1>@Model.StudentName</h1>
+        <p class="section-lead">@Model.StudentEmail · @Model.LessonTitle</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Submissions">Voltar</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <section class="soft-panel">
+            <h2 class="h5">@Model.ActivityTitle</h2>
+            <p class="text-muted">@Model.Prompt</p>
+            <p><strong>Problema:</strong> @(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "—" : Model.ProblemDescription)</p>
+            <p><strong>Solução:</strong> @(string.IsNullOrWhiteSpace(Model.SolutionDescription) ? "—" : Model.SolutionDescription)</p>
+            <p><strong>Evidência textual:</strong></p>
+            <p>@(string.IsNullOrWhiteSpace(Model.TextResponse) ? "—" : Model.TextResponse)</p>
+            @if (!string.IsNullOrWhiteSpace(Model.GitHubUrl))
+            {
+                <p><strong>GitHub:</strong> <a href="@Model.GitHubUrl" target="_blank" rel="noopener">@Model.GitHubUrl</a></p>
+            }
+            @if (Model.Attachments.Any())
+            {
+                <p class="mb-1"><strong>Anexos</strong></p>
+                <ul>
+                    @foreach (var file in Model.Attachments)
+                    {
+                        <li>
+                            <a asp-controller="Files" asp-action="Attachment" asp-route-id="@file.Id">@file.FileName</a>
+                            <span class="small text-muted">(@(Math.Round(file.SizeBytes / 1024.0, 1)) KB)</span>
+                        </li>
+                    }
+                </ul>
+            }
+            <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Abrir aula</a>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <form asp-action="Review" method="post" class="soft-panel">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.SubmissionId" />
+            <h2 class="h5">Seu feedback</h2>
+            <p class="small text-muted">Oriente o próximo passo. Evite apenas “errado” sem caminho de revisão.</p>
+            <div class="mb-3">
+                <label class="form-label" for="teacherFeedback">Comentário</label>
+                <textarea id="teacherFeedback" name="teacherFeedback" class="form-control" rows="6"
+                          required>@Model.TeacherFeedback</textarea>
+            </div>
+            <div class="form-check mb-3">
+                <input type="hidden" name="markReviewed" value="false" />
+                <input class="form-check-input" type="checkbox" name="markReviewed" value="true" id="markReviewed" checked />
+                <label class="form-check-label" for="markReviewed">Marcar atividade como revisada</label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Enviar feedback</button>
+        </form>
+    </div>
+</div>

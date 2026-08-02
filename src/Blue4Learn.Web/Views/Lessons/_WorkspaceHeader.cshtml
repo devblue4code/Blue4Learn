@@ -1,0 +1,24 @@
+@model LessonWorkspaceViewModel
+
+<nav class="ws-crumb" aria-label="Navegação da aula">
+    <a asp-controller="Lessons" asp-action="Index">Conteúdos</a>
+    <span>/</span>
+    <span>@Model.ModuleTitle</span>
+    <span>/</span>
+    <strong>Aula @Model.SortOrder</strong>
+</nav>
+
+<header class="ws-page-head">
+    <div>
+        <p class="eyebrow">@Model.CourseTitle · @Model.ModuleTitle</p>
+        <h1>@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Objective))
+        {
+            <p class="ws-objective"><span>Objetivo</span> @Model.Objective</p>
+        }
+    </div>
+</header>
+
+<div class="ws-tools-sticky">
+    <partial name="_WorkspaceNav" model="Model" />
+</div>

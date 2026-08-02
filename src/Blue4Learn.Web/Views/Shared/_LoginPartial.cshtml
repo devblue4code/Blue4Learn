@@ -1,0 +1,35 @@
+﻿@using Blue4Learn.Web.Domain
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    var user = await UserManager.GetUserAsync(User);
+    var displayName = string.IsNullOrWhiteSpace(user?.FullName)
+        ? UserManager.GetUserName(User) ?? "Conta"
+        : user!.FullName;
+    var initials = string.Concat(
+        displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(p => char.ToUpperInvariant(p[0])));
+
+    <div class="account-chip">
+        <a class="account-profile" asp-area="Identity" asp-page="/Account/Manage/Index" title="Minha conta">
+            <span class="account-avatar" aria-hidden="true">@initials</span>
+            <span class="account-meta">
+                <span class="account-name">@displayName</span>
+                <span class="account-hint">Meu perfil</span>
+            </span>
+        </a>
+        <form asp-area="Identity" asp-page="/Account/Logout"
+              asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+            <button type="submit" class="account-logout">Sair</button>
+        </form>
+    </div>
+}
+else
+{
+    <a class="btn btn-primary nav-cta" asp-area="Identity" asp-page="/Account/Login">Entrar</a>
+}

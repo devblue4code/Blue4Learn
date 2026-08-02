@@ -1,0 +1,16 @@
+## .NET
+bin/
+obj/
+*.user
+*.db-shm
+*.db-wal
+app.db
+**/app.db
+*.user
+*.suo
+.vs/
+.idea/
+*.log
+secrets.json
+App_Data/
+**/App_Data/

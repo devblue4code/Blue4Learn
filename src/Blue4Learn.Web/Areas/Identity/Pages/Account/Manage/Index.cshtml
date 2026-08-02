@@ -1,0 +1,87 @@
+@page
+@model Blue4Learn.Web.Areas.Identity.Pages.Account.Manage.IndexModel
+@{
+    ViewData["Title"] = "Meu perfil";
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+<section class="profile-page">
+    <header class="profile-hero">
+        <div class="profile-hero-main">
+            <div class="profile-avatar" aria-hidden="true">@Model.Initials</div>
+            <div>
+                <p class="eyebrow">Conta</p>
+                <h1>@(string.IsNullOrWhiteSpace(Model.Input.FullName) ? Model.Username : Model.Input.FullName)</h1>
+                <p class="profile-hero-lead">@Model.Input.Email</p>
+                <div class="profile-badges">
+                    <span class="profile-badge">@Model.RoleLabel</span>
+                    <span class="profile-badge profile-badge-muted">@Model.TenantName</span>
+                </div>
+            </div>
+        </div>
+        <div class="profile-hero-side">
+            <span class="profile-stat-label">Turmas</span>
+            <strong class="profile-stat-value">@Model.ClassNames.Count</strong>
+            @if (Model.ClassNames.Any())
+            {
+                <p class="profile-stat-note">@string.Join(" · ", Model.ClassNames.Take(3))</p>
+            }
+            else
+            {
+                <p class="profile-stat-note">Nenhuma turma ainda</p>
+            }
+        </div>
+    </header>
+
+    <partial name="_StatusMessage" model="Model.StatusMessage" />
+
+    <div class="profile-grid">
+        <aside class="profile-sidebar soft-panel">
+            <h2 class="h6 mb-3">Configurações</h2>
+            <partial name="_ManageNav" />
+            <p class="profile-sidebar-note">
+                Seus registros de aprendizagem continuam privados. Aqui você só ajusta dados da conta.
+            </p>
+        </aside>
+
+        <section class="soft-panel profile-card">
+            <div class="profile-card-head">
+                <div>
+                    <h2>Dados pessoais</h2>
+                    <p>Atualize como você aparece para a professora e para a instituição.</p>
+                </div>
+            </div>
+
+            <form id="profile-form" method="post" class="profile-form">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label asp-for="Input.FullName" class="form-label"></label>
+                        <input asp-for="Input.FullName" class="form-control" autocomplete="name" />
+                        <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-7">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" autocomplete="email" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-5">
+                        <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                        <input asp-for="Input.PhoneNumber" class="form-control" autocomplete="tel" placeholder="Opcional" />
+                        <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="profile-form-actions">
+                    <button type="submit" class="btn btn-primary">Salvar perfil</button>
+                    <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Dashboard">Voltar ao início</a>
+                </div>
+            </form>
+        </section>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
