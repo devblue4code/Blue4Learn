@@ -28,6 +28,8 @@ public static class DbSeeder
 
         if (await db.Tenants.AnyAsync())
         {
+            await EnsureDemoQuizAsync(db);
+            await EnrichCourseDescriptionAsync(db);
             return;
         }
 
@@ -42,7 +44,7 @@ public static class DbSeeder
             Tenant = tenant,
             Title = "Programação Web",
             Slug = "programacao-web",
-            Description = "Fundamentos de HTML, CSS e HTTP com registro reflexivo da aprendizagem."
+            Description = "Estudo e desenvolvimento de aplicações para a Internet utilizando tecnologias web front-end e back-end. A disciplina aborda conceitos fundamentais da arquitetura Cliente-Servidor, protocolos web, marcação, estilização, e programação do lado do cliente (browser) e do servidor. O foco está na criação de sistemas web interativos, responsivos e acessíveis, preparando o aluno para os desafios do mercado de desenvolvimento de software moderno."
         };
 
         var module = new Module
@@ -102,6 +104,92 @@ public static class DbSeeder
             new Enrollment { ClassGroupId = classGroup.Id, UserId = student2.Id });
 
         await db.SaveChangesAsync();
+        await EnsureDemoQuizAsync(db);
+    }
+
+    private static async Task EnrichCourseDescriptionAsync(ApplicationDbContext db)
+    {
+        var course = await db.Courses.OrderBy(c => c.Title).FirstOrDefaultAsync();
+        if (course is null || course.Description.Length > 120)
+        {
+            return;
+        }
+
+        course.Description =
+            "Estudo e desenvolvimento de aplicações para a Internet utilizando tecnologias web front-end e back-end. A disciplina aborda conceitos fundamentais da arquitetura Cliente-Servidor, protocolos web, marcação, estilização, e programação do lado do cliente (browser) e do servidor. O foco está na criação de sistemas web interativos, responsivos e acessíveis, preparando o aluno para os desafios do mercado de desenvolvimento de software moderno.";
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task EnsureDemoQuizAsync(ApplicationDbContext db)
+    {
+        if (await db.Quizzes.AnyAsync())
+        {
+            return;
+        }
+
+        var course = await db.Courses.OrderBy(c => c.Title).FirstOrDefaultAsync();
+        if (course is null)
+        {
+            return;
+        }
+
+        var quiz = new Quiz
+        {
+            CourseId = course.Id,
+            Title = "Quiz · Fundamentos da Web",
+            Description = "Verifique conceitos de HTTP, HTML e arquitetura cliente-servidor.",
+            IsPublished = true,
+            Questions =
+            [
+                new QuizQuestion
+                {
+                    SortOrder = 1,
+                    Prompt = "Qual protocolo é usado para transferir páginas na Web?",
+                    OptionA = "FTP",
+                    OptionB = "HTTP",
+                    OptionC = "SMTP",
+                    OptionD = "SSH",
+                    CorrectOption = "B"
+                },
+                new QuizQuestion
+                {
+                    SortOrder = 2,
+                    Prompt = "Em uma arquitetura cliente-servidor, o navegador atua como:",
+                    OptionA = "Servidor de banco",
+                    OptionB = "Cliente",
+                    OptionC = "Proxy DNS",
+                    OptionD = "Balanceador",
+                    CorrectOption = "B"
+                },
+                new QuizQuestion
+                {
+                    SortOrder = 3,
+                    Prompt = "Qual tag HTML representa o conteúdo principal da página?",
+                    OptionA = "<div>",
+                    OptionB = "<section>",
+                    OptionC = "<main>",
+                    OptionD = "<span>",
+                    CorrectOption = "C"
+                }
+            ]
+        };
+
+        db.Quizzes.Add(quiz);
+        await db.SaveChangesAsync();
+
+        var student = await db.Users.FirstOrDefaultAsync(u => u.Email == "aluno@blue4learn.local");
+        if (student is not null)
+        {
+            db.QuizAttempts.Add(new QuizAttempt
+            {
+                QuizId = quiz.Id,
+                UserId = student.Id,
+                Score = 2,
+                MaxScore = 3,
+                SubmittedAtUtc = DateTime.UtcNow.AddHours(-5)
+            });
+            await db.SaveChangesAsync();
+        }
     }
 
     private static async Task<ApplicationUser> EnsureUserAsync(

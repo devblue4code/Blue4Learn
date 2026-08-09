@@ -1,0 +1,45 @@
+@model QuizListViewModel
+@{
+    ViewData["Title"] = "Quizzes";
+    ViewData["TopTitle"] = "Quizzes";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Avaliação</p>
+        <h1>Quizzes</h1>
+        <p class="section-lead">Responda aos quizzes publicados na sua disciplina.</p>
+    </div>
+</div>
+
+@if (!Model.Quizzes.Any())
+{
+    <div class="soft-panel">
+        <p class="mb-0 text-muted">Nenhum quiz disponível no momento.</p>
+    </div>
+}
+else
+{
+    <div class="components-grid">
+        @foreach (var quiz in Model.Quizzes)
+        {
+            <article class="soft-panel">
+                <h2 class="h5">@quiz.Title</h2>
+                <p class="text-muted">@quiz.Description</p>
+                <p class="small text-muted">@quiz.QuestionCount questão(ões)</p>
+                @if (quiz.AlreadyAttempted)
+                {
+                    <p class="mb-2">
+                        Último resultado:
+                        <strong>@quiz.LastScore / @quiz.LastMaxScore</strong>
+                    </p>
+                    <a class="btn btn-outline-primary" asp-action="Take" asp-route-id="@quiz.Id">Refazer</a>
+                }
+                else
+                {
+                    <a class="btn btn-primary" asp-action="Take" asp-route-id="@quiz.Id">Responder</a>
+                }
+            </article>
+        }
+    </div>
+}

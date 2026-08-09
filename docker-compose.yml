@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: DataSource=/data/app.db;Cache=Shared
+    volumes:
+      - blue4learn-data:/data
+      - blue4learn-uploads:/app/App_Data
+    restart: unless-stopped
+
+volumes:
+  blue4learn-data:
+  blue4learn-uploads:

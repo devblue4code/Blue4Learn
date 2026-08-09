@@ -1,0 +1,96 @@
+@model CourseComponentsViewModel
+@{
+    ViewData["Title"] = "Componentes curriculares";
+    ViewData["ShowCrumbs"] = true;
+    ViewData["CrumbParent"] = "Gestão de cursos";
+    ViewData["CrumbCurrent"] = "Componentes";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.CourseTitle</p>
+        <h1>Componentes curriculares</h1>
+        <p class="section-lead">Organize módulos e aulas da disciplina.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary" asp-action="Syllabus">Ver ementa</a>
+        <a class="btn btn-primary" asp-controller="Content" asp-action="Create">Nova aula</a>
+    </div>
+</div>
+
+@if (Model.CourseId == Guid.Empty)
+{
+    <div class="soft-panel">
+        <p class="mb-0 text-muted">Nenhuma disciplina disponível para gestão.</p>
+    </div>
+}
+else
+{
+    <form asp-action="CreateModule" method="post" class="soft-panel mb-4">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="NewModule.CourseId" />
+        <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label" asp-for="NewModule.Title"></label>
+                <input class="form-control" asp-for="NewModule.Title" placeholder="Ex.: Fundamentos da Web" />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">Adicionar módulo</button>
+            </div>
+        </div>
+    </form>
+
+    @if (!Model.Modules.Any())
+    {
+        <div class="soft-panel">
+            <p class="mb-0 text-muted">Nenhum módulo ainda. Crie o primeiro para agrupar as aulas.</p>
+        </div>
+    }
+    else
+    {
+        <div class="components-grid">
+            @foreach (var module in Model.Modules)
+            {
+                <article class="soft-panel component-card">
+                    <div class="d-flex justify-content-between gap-2 mb-2">
+                        <div>
+                            <span class="status-pill status-published">Módulo @module.SortOrder</span>
+                            <h2 class="h5 mt-2 mb-1">@module.Title</h2>
+                            <p class="text-muted small mb-0">@module.LessonCount aula(s)</p>
+                        </div>
+                    </div>
+
+                    <form asp-action="RenameModule" method="post" class="mb-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@module.Id" />
+                        <div class="input-group input-group-sm">
+                            <input class="form-control" name="title" value="@module.Title" />
+                            <button class="btn btn-outline-primary" type="submit">Salvar</button>
+                        </div>
+                    </form>
+
+                    @if (module.Lessons.Any())
+                    {
+                        <ul class="component-lessons">
+                            @foreach (var lesson in module.Lessons)
+                            {
+                                <li>
+                                    <a asp-controller="Content" asp-action="Edit" asp-route-id="@lesson.Id">
+                                        @lesson.SortOrder. @lesson.Title
+                                    </a>
+                                    <span class="status-pill status-@lesson.Status.ToString().ToLowerInvariant()">
+                                        @lesson.Status
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="small text-muted mb-0">Sem aulas neste módulo.</p>
+                    }
+                </article>
+            }
+        </div>
+    }
+}

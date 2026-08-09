@@ -63,7 +63,16 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Em container (Docker) exponemos só HTTP na porta 8080.
+var runningInContainer = string.Equals(
+    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+if (!runningInContainer)
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();

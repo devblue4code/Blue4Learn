@@ -28,8 +28,12 @@ public class HomeController : Controller
             return RedirectToAction(nameof(Dashboard));
         }
 
-        return View();
+        // Entrada do protótipo: login primeiro (landing segue em /Home/Welcome).
+        return Redirect("/Identity/Account/Login");
     }
+
+    [AllowAnonymous]
+    public IActionResult Welcome() => View("Index");
 
     [Authorize]
     public async Task<IActionResult> Dashboard()

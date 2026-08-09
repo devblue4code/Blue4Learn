@@ -1,0 +1,53 @@
+@model QuizTakeViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    ViewData["TopTitle"] = "Quizzes";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Quiz</p>
+        <h1>@Model.Title</h1>
+        <p class="section-lead">@Model.Description</p>
+    </div>
+</div>
+
+<form asp-action="Take" method="post" class="soft-panel">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="QuizId" />
+    <input type="hidden" asp-for="Title" />
+    <input type="hidden" asp-for="Description" />
+
+    @for (var i = 0; i < Model.Questions.Count; i++)
+    {
+        <fieldset class="mb-4">
+            <legend class="h6">@Model.Questions[i].SortOrder. @Model.Questions[i].Prompt</legend>
+            <input type="hidden" asp-for="Questions[i].Id" />
+            <input type="hidden" asp-for="Questions[i].Prompt" />
+            <input type="hidden" asp-for="Questions[i].OptionA" />
+            <input type="hidden" asp-for="Questions[i].OptionB" />
+            <input type="hidden" asp-for="Questions[i].OptionC" />
+            <input type="hidden" asp-for="Questions[i].OptionD" />
+            <input type="hidden" asp-for="Questions[i].SortOrder" />
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Questions[i].SelectedOption" value="A" id="q@(i)a" />
+                <label class="form-check-label" for="q@(i)a">A) @Model.Questions[i].OptionA</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Questions[i].SelectedOption" value="B" id="q@(i)b" />
+                <label class="form-check-label" for="q@(i)b">B) @Model.Questions[i].OptionB</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Questions[i].SelectedOption" value="C" id="q@(i)c" />
+                <label class="form-check-label" for="q@(i)c">C) @Model.Questions[i].OptionC</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Questions[i].SelectedOption" value="D" id="q@(i)d" />
+                <label class="form-check-label" for="q@(i)d">D) @Model.Questions[i].OptionD</label>
+            </div>
+        </fieldset>
+    }
+
+    <button type="submit" class="btn btn-primary">Enviar respostas</button>
+    <a class="btn btn-outline-primary ms-2" asp-action="Index">Cancelar</a>
+</form>

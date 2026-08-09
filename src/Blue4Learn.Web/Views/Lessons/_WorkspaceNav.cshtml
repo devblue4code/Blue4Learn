@@ -1,7 +1,7 @@
 @model LessonWorkspaceViewModel
 @{
     var section = ViewData["WorkspaceSection"] as string ?? "content";
-    string NavClass(string key) => section == key ? "ws-tool is-active" : "ws-tool";
+    string NavClass(string key) => section == key ? "ws-side-link is-active" : "ws-side-link";
     string BadgeClass(bool done, bool warn = false, bool started = false)
     {
         if (warn) return "ws-tool-badge is-warn";
@@ -11,41 +11,34 @@
     }
 }
 
-<nav class="ws-tools" aria-label="Áreas da aula">
-    <a class="@NavClass("content")" asp-action="Workspace" asp-route-id="@Model.LessonId" title="Conteúdo">
-        <span class="ws-tool-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v2H4V5zm0 6h16v2H4v-2zm0 6h10v2H4v-2z" fill="currentColor"/></svg>
-        </span>
+<nav class="ws-side-nav" aria-label="Áreas da aula">
+    <p class="ws-side-label">Nesta aula</p>
+    <a class="@NavClass("content")" asp-action="Workspace" asp-route-id="@Model.LessonId">
+        <i class="bi bi-file-text" aria-hidden="true"></i>
         <span>Conteúdo</span>
     </a>
     <a class="@NavClass("journal")" asp-action="Journal" asp-route-id="@Model.LessonId"
        title="@(Model.JournalNeedsAttention ? "Registro — precisa revisar" : Model.JournalDone ? "Registro salvo" : "Meu registro")">
-        <span class="ws-tool-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9a2 2 0 0 1 2 2v14l-4.5-2.2L8 19V5a2 2 0 0 1 2-2H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 7h5M10 11h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            <span class="@BadgeClass(Model.JournalDone, Model.JournalNeedsAttention)" aria-hidden="true"></span>
-        </span>
+        <i class="bi bi-journal-text" aria-hidden="true"></i>
         <span>Registro</span>
+        <span class="@BadgeClass(Model.JournalDone, Model.JournalNeedsAttention)" aria-hidden="true"></span>
     </a>
     <a class="@NavClass("activity")" asp-action="Activity" asp-route-id="@Model.LessonId"
        title="@(Model.ActivityDone ? "Atividade concluída" : Model.ActivityStarted ? "Atividade em andamento" : "Atividade")">
-        <span class="ws-tool-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11v2H9V6zm0 5h11v2H9v-2zm0 5h11v2H9v-2zM5.5 6.5l1.2 1.2L8.8 5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 11.5l1.2 1.2 2.1-2.1M5.5 16.5l1.2 1.2 2.1-2.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            @if (Model.Activity is not null)
-            {
-                <span class="@BadgeClass(Model.ActivityDone, started: Model.ActivityStarted && !Model.ActivityDone)" aria-hidden="true"></span>
-            }
-        </span>
+        <i class="bi bi-check2-square" aria-hidden="true"></i>
         <span>Atividade</span>
+        @if (Model.Activity is not null)
+        {
+            <span class="@BadgeClass(Model.ActivityDone, started: Model.ActivityStarted && !Model.ActivityDone)" aria-hidden="true"></span>
+        }
     </a>
     <a class="@NavClass("evidence")" asp-action="Evidence" asp-route-id="@Model.LessonId"
        title="@(Model.EvidenceDone ? "Evidência enviada" : "Evidências")">
-        <span class="ws-tool-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-5-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v6h6M9 13h6M9 17h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            @if (Model.Activity is not null)
-            {
-                <span class="@BadgeClass(Model.EvidenceDone)" aria-hidden="true"></span>
-            }
-        </span>
+        <i class="bi bi-paperclip" aria-hidden="true"></i>
         <span>Evidências</span>
+        @if (Model.Activity is not null)
+        {
+            <span class="@BadgeClass(Model.EvidenceDone)" aria-hidden="true"></span>
+        }
     </a>
 </nav>

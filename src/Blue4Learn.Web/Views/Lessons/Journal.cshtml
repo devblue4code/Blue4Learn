@@ -1,11 +1,13 @@
 @model LessonWorkspaceViewModel
 @{
     ViewData["Title"] = $"Registro · {Model.Title}";
+    ViewData["WorkspaceSection"] = "journal";
 }
 
 <article class="ws ws-page">
     <partial name="_WorkspaceHeader" model="Model" />
-
+    <div class="ws-layout">
+        <partial name="_WorkspaceNav" model="Model" />
     <form asp-action="SaveJournal" method="post" class="soft-panel journal-form ws-panel ws-page-form" id="registro">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Journal.LessonId" />
@@ -131,6 +133,7 @@
     {
         <partial name="_WorkspaceNextStep" model="Model" />
     }
+    </div>
 </article>
 
 @section Scripts {

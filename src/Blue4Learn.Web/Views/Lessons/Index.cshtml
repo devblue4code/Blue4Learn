@@ -1,14 +1,16 @@
 @model IReadOnlyList<LessonSummaryViewModel>
 @{
     ViewData["Title"] = "Conteúdos";
+    ViewData["TopTitle"] = "Conteúdos";
 }
 
 <div class="page-header">
     <div>
         <p class="eyebrow">Programação Web</p>
-        <h1>Conteúdos</h1>
+        <h1>Conteúdos da turma</h1>
         <p class="section-lead">Leia no celular ou no computador e registre a aprendizagem em cada aula.</p>
     </div>
+    <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Syllabus">Ver ementa</a>
 </div>
 
 <div class="lesson-list">

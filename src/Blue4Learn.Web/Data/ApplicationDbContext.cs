@@ -25,6 +25,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<StudentJournalEntry> StudentJournalEntries => Set<StudentJournalEntry>();
     public DbSet<JournalQuestion> JournalQuestions => Set<JournalQuestion>();
     public DbSet<ConceptMark> ConceptMarks => Set<ConceptMark>();
+    public DbSet<Quiz> Quizzes => Set<Quiz>();
+    public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
+    public DbSet<QuizAttempt> QuizAttempts => Set<QuizAttempt>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -87,6 +90,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ConceptMark>(e =>
         {
             e.HasIndex(x => new { x.JournalEntryId, x.ConceptId }).IsUnique();
+        });
+
+        builder.Entity<Quiz>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(200);
+        });
+
+        builder.Entity<QuizQuestion>(e =>
+        {
+            e.Property(x => x.CorrectOption).HasMaxLength(1);
+        });
+
+        builder.Entity<QuizAttempt>(e =>
+        {
+            e.HasIndex(x => new { x.QuizId, x.UserId });
         });
 
         builder.Entity<ApplicationUser>(e =>

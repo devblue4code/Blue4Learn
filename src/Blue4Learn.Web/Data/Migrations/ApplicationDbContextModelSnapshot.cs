@@ -242,6 +242,109 @@ namespace Blue4Learn.Web.Data.Migrations
                     b.ToTable("ConceptMarks");
                 });
 
+            modelBuilder.Entity("Blue4Learn.Web.Domain.Quiz", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.ToTable("Quizzes");
+                });
+
+            modelBuilder.Entity("Blue4Learn.Web.Domain.QuizAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxScore")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("QuizId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("QuizId", "UserId");
+
+                    b.ToTable("QuizAttempts");
+                });
+
+            modelBuilder.Entity("Blue4Learn.Web.Domain.QuizQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CorrectOption")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionA")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionB")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionC")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionD")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("QuizId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuizId");
+
+                    b.ToTable("QuizQuestions");
+                });
+
             modelBuilder.Entity("Blue4Learn.Web.Domain.ContentDocument", b =>
                 {
                     b.Property<Guid>("Id")
@@ -756,6 +859,47 @@ namespace Blue4Learn.Web.Data.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("Blue4Learn.Web.Domain.Quiz", b =>
+                {
+                    b.HasOne("Blue4Learn.Web.Domain.Course", "Course")
+                        .WithMany("Quizzes")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("Blue4Learn.Web.Domain.QuizAttempt", b =>
+                {
+                    b.HasOne("Blue4Learn.Web.Domain.Quiz", "Quiz")
+                        .WithMany("Attempts")
+                        .HasForeignKey("QuizId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Blue4Learn.Web.Domain.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Quiz");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Blue4Learn.Web.Domain.QuizQuestion", b =>
+                {
+                    b.HasOne("Blue4Learn.Web.Domain.Quiz", "Quiz")
+                        .WithMany("Questions")
+                        .HasForeignKey("QuizId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Quiz");
+                });
+
             modelBuilder.Entity("Blue4Learn.Web.Domain.Enrollment", b =>
                 {
                     b.HasOne("Blue4Learn.Web.Domain.ClassGroup", "ClassGroup")
@@ -914,6 +1058,15 @@ namespace Blue4Learn.Web.Data.Migrations
                     b.Navigation("Classes");
 
                     b.Navigation("Modules");
+
+                    b.Navigation("Quizzes");
+                });
+
+            modelBuilder.Entity("Blue4Learn.Web.Domain.Quiz", b =>
+                {
+                    b.Navigation("Attempts");
+
+                    b.Navigation("Questions");
                 });
 
             modelBuilder.Entity("Blue4Learn.Web.Domain.Lesson", b =>

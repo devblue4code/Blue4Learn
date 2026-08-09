@@ -173,6 +173,57 @@ public class TeacherController : Controller
         });
     }
 
+    public async Task<IActionResult> Journals(string? filter = null)
+    {
+        var user = await _access.GetCurrentUserAsync(User);
+        if (user is null) return Challenge();
+
+        var classGroup = await _access.GetPrimaryClassAsync(user);
+        var studentIds = await _access.GetStudentIdsInSharedClassesAsync(user);
+        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+
+        filter = (filter ?? "all").ToLowerInvariant();
+
+        var journals = await _db.StudentJournalEntries
+            .AsNoTracking()
+            .Include(j => j.User)
+            .Include(j => j.Questions)
+            .Include(j => j.Lesson).ThenInclude(l => l.Module)
+            .Where(j => studentIds.Contains(j.UserId) && courseIds.Contains(j.Lesson.Module.CourseId))
+            .OrderByDescending(j => j.NeedsReview)
+            .ThenByDescending(j => j.UpdatedAtUtc)
+            .ToListAsync();
+
+        journals = filter switch
+        {
+            "review" => journals.Where(j => j.NeedsReview).ToList(),
+            "questions" => journals.Where(j => j.Questions.Any(q => q.Status == QuestionStatus.Open)).ToList(),
+            _ => journals
+        };
+
+        var entries = journals.Select(j => new ClassJournalItemViewModel
+        {
+            Id = j.Id,
+            StudentName = j.User.FullName,
+            StudentUserId = j.UserId,
+            LessonId = j.LessonId,
+            LessonTitle = j.Lesson.Title,
+            Reflection = j.Reflection,
+            NeedsReview = j.NeedsReview,
+            UnderstoodObjective = j.UnderstoodObjective,
+            OpenQuestions = j.Questions.Count(q => q.Status == QuestionStatus.Open),
+            UpdatedAtUtc = j.UpdatedAtUtc
+        }).ToList();
+
+        ViewData["JournalFilter"] = filter;
+        return View(new ClassJournalsViewModel
+        {
+            ClassName = classGroup?.Name ?? "Turma",
+            CourseTitle = classGroup?.Course.Title ?? "Disciplina",
+            Entries = entries
+        });
+    }
+
     public async Task<IActionResult> Submissions()
     {
         var user = await _access.GetCurrentUserAsync(User);

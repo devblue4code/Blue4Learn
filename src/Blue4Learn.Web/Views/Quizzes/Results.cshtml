@@ -1,0 +1,115 @@
+@model QuizResultsViewModel
+@{
+    ViewData["Title"] = "Resultados de quizzes";
+    ViewData["TopTitle"] = "Quizzes";
+    var top = Model.Attempts.OrderByDescending(a => a.Percent).Take(5).ToList();
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.CourseTitle</p>
+        <h1>Resultados de quizzes</h1>
+        <p class="section-lead">@(string.IsNullOrEmpty(Model.QuizTitle) ? "Acompanhe o desempenho da turma." : Model.QuizTitle)</p>
+    </div>
+</div>
+
+@if (Model.QuizId == Guid.Empty)
+{
+    <div class="soft-panel">
+        <p class="mb-0 text-muted">Nenhum quiz publicado nesta disciplina.</p>
+    </div>
+}
+else
+{
+    <section class="teach-stat-grid mb-4" aria-label="Resumo do quiz">
+        <article class="teach-stat">
+            <span>Questões</span>
+            <strong>@Model.QuestionCount</strong>
+        </article>
+        <article class="teach-stat">
+            <span>Tentativas</span>
+            <strong>@Model.AttemptCount</strong>
+        </article>
+        <article class="teach-stat">
+            <span>Média da turma</span>
+            <strong>@Model.AveragePercent.ToString("0")%</strong>
+        </article>
+        <article class="teach-stat">
+            <span>Melhor nota</span>
+            <strong>@(Model.Attempts.Any() ? Model.Attempts.Max(a => a.Percent) + "%" : "—")</strong>
+        </article>
+        <article class="teach-stat">
+            <span>Quiz</span>
+            <strong style="font-size:1rem;line-height:1.3">@Model.QuizTitle</strong>
+        </article>
+    </section>
+
+    <div class="syllabus-grid">
+        <div class="data-card">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Estudante</th>
+                            <th>Pontuação</th>
+                            <th>Percentual</th>
+                            <th>Enviado em</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Attempts.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-muted">Nenhuma tentativa ainda.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var attempt in Model.Attempts)
+                        {
+                            <tr>
+                                <td><strong class="text-body">@attempt.StudentName</strong></td>
+                                <td>@attempt.Score / @attempt.MaxScore</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress-track flex-grow-1" style="max-width:7rem">
+                                            <div class="progress-fill" style="width:@attempt.Percent%"></div>
+                                        </div>
+                                        <span>@attempt.Percent%</span>
+                                    </div>
+                                </td>
+                                <td>@attempt.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div class="data-card-footer">
+                <span>Mostrando @Model.Attempts.Count tentativa(s)</span>
+            </div>
+        </div>
+
+        <aside>
+            <section class="soft-panel">
+                <h2 class="h6 mb-3">Ranking</h2>
+                @if (!top.Any())
+                {
+                    <p class="text-muted mb-0 small">Sem dados ainda.</p>
+                }
+                else
+                {
+                    <ol class="mb-0 ps-3">
+                        @foreach (var row in top)
+                        {
+                            <li class="mb-2">
+                                <strong>@row.StudentName</strong>
+                                <span class="text-muted"> · @row.Percent%</span>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+        </aside>
+    </div>
+}

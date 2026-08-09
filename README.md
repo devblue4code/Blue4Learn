@@ -19,6 +19,16 @@ Solução em `src/Blue4Learn.Web` (ASP.NET Core MVC 8 + Identity + EF Core + SQL
 
 ### Como rodar
 
+**Docker (recomendado):**
+
+```bash
+docker compose up --build
+```
+
+Abra [http://localhost:5080](http://localhost:5080). Dados SQLite e uploads ficam em volumes Docker.
+
+**Local com .NET SDK:**
+
 ```bash
 cd src/Blue4Learn.Web
 dotnet run

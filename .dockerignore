@@ -1,0 +1,16 @@
+**/.git
+**/.vs
+**/.vscode
+**/.cursor
+**/bin
+**/obj
+**/node_modules
+**/*.user
+**/*.db
+**/*.db-*
+**/App_Data
+**/agent-transcripts
+**/agent-tools
+README.md
+*.md
+!src/**/*.md

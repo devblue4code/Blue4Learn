@@ -1,6 +1,7 @@
 @model TeacherDashboardViewModel
 @{
-    ViewData["Title"] = "Painel da professora";
+    ViewData["Title"] = "Painel";
+    ViewData["TopTitle"] = "Painel";
     var hour = DateTime.Now.Hour;
     var greeting = hour < 12
         ? "Bom dia"
@@ -56,8 +57,10 @@ else
                     <a class="btn btn-primary" asp-controller="Content" asp-action="Index">Publicar Markdown</a>
                 }
                 <a class="btn btn-outline-primary" asp-action="Submissions">Atividades</a>
+                <a class="btn btn-outline-primary" asp-action="Journals">Diários</a>
                 <a class="btn btn-outline-primary" asp-controller="Classes" asp-action="Details" asp-route-id="@Model.ClassId">Membros</a>
                 <a class="btn btn-outline-primary" asp-controller="Content" asp-action="Index">Conteúdos</a>
+                <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Syllabus">Ementa</a>
             </div>
         </div>
 
@@ -111,10 +114,6 @@ else
         <article class="teach-stat">
             <span>Atividades enviadas</span>
             <strong>@Model.SubmittedActivities</strong>
-        </article>
-        <article class="teach-stat @(Model.NeedsReviewJournals > 0 ? "is-warn" : null)">
-            <span>Pedem revisar</span>
-            <strong>@Model.NeedsReviewJournals</strong>
         </article>
     </section>
 

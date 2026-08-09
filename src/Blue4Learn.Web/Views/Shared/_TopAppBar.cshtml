@@ -1,0 +1,54 @@
+@using Blue4Learn.Web.Domain
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var title = ViewData["TopTitle"] as string
+        ?? ViewData["Title"] as string
+        ?? "Blue4Learn";
+    var crumbParent = ViewData["CrumbParent"] as string;
+    var crumbCurrent = ViewData["CrumbCurrent"] as string ?? title;
+    var showCrumbs = ViewData["ShowCrumbs"] as bool? == true || !string.IsNullOrEmpty(crumbParent);
+
+    var user = await UserManager.GetUserAsync(User);
+    var displayName = string.IsNullOrWhiteSpace(user?.FullName)
+        ? UserManager.GetUserName(User) ?? "U"
+        : user!.FullName;
+    var initial = string.IsNullOrWhiteSpace(displayName)
+        ? 'U'
+        : char.ToUpperInvariant(displayName.Trim()[0]);
+}
+
+<header class="app-topbar">
+    <div class="d-flex align-items-center gap-3 min-w-0">
+        <button type="button" class="app-menu-toggle" data-app-nav-toggle aria-label="Abrir menu">
+            <span></span><span></span><span></span>
+        </button>
+
+        @if (showCrumbs)
+        {
+            <nav class="app-crumbs" aria-label="Breadcrumb">
+                <img src="~/img/icons/icon-nav-course.svg" asp-append-version="true" alt="" width="14" height="12" />
+                @if (!string.IsNullOrEmpty(crumbParent))
+                {
+                    <span>@crumbParent</span>
+                    <span class="crumb-sep" aria-hidden="true">›</span>
+                }
+                <span class="crumb-current">@crumbCurrent</span>
+            </nav>
+        }
+        else
+        {
+            <h1 class="app-topbar-title">@title</h1>
+        }
+    </div>
+
+    <div class="app-top-actions">
+        <span class="app-icon-btn" title="Buscar" aria-hidden="true">
+            <img src="~/img/icons/icon-help.svg" asp-append-version="true" alt="" width="18" height="18" style="opacity:.55" />
+        </span>
+        <span class="app-icon-btn" title="Notificações" aria-hidden="true">
+            <img src="~/img/icons/icon-bell.svg" asp-append-version="true" alt="" width="16" height="20" />
+        </span>
+        <a class="app-top-avatar" asp-area="Identity" asp-page="/Account/Manage/Index" title="Minha conta">@initial</a>
+    </div>
+</header>

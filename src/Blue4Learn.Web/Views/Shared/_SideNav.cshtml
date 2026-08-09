@@ -1,0 +1,122 @@
+@using Blue4Learn.Web.Domain
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var isTeacher = User.IsInRole(AppRoles.Teacher) || User.IsInRole(AppRoles.Admin);
+
+    string NavClass(string ctrl, string? act = null)
+    {
+        var match = string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase)
+            && (act is null || string.Equals(action, act, StringComparison.OrdinalIgnoreCase));
+        return match ? "app-nav-link is-active" : "app-nav-link";
+    }
+
+    var coursesActive = (string.Equals(controller, "Classes", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(action, "Join", StringComparison.OrdinalIgnoreCase))
+        || string.Equals(controller, "Content", StringComparison.OrdinalIgnoreCase)
+        || (string.Equals(controller, "Courses", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(action, "Index", StringComparison.OrdinalIgnoreCase));
+
+    var panelCtrl = isTeacher ? "Teacher" : "Home";
+    var panelAct = isTeacher ? "Dashboard" : "Dashboard";
+    var journalsCtrl = isTeacher ? "Teacher" : "Progress";
+    var journalsAct = isTeacher ? "Journals" : "Index";
+}
+
+<aside class="app-side" aria-label="Navegação principal">
+    <a class="app-side-brand" asp-controller="Home" asp-action="Index">
+        <span class="brand-mark">B4</span>
+        <span>
+            <span class="brand-text">Blue4Learn</span>
+            <span class="brand-tag">Excelência acadêmica</span>
+        </span>
+    </a>
+
+    <nav class="app-side-nav">
+        <a class="@NavClass(panelCtrl, panelAct)" asp-controller="@panelCtrl" asp-action="@panelAct">
+            <span class="app-nav-icon">
+                <img src="~/img/icons/icon-nav-dashboard.svg" asp-append-version="true" alt="" width="18" height="18" />
+            </span>
+            <span>Painel</span>
+        </a>
+
+        <a class="@NavClass(journalsCtrl, journalsAct)" asp-controller="@journalsCtrl" asp-action="@journalsAct">
+            <span class="app-nav-icon">
+                <img src="~/img/icons/icon-nav-diary.svg" asp-append-version="true" alt="" width="22" height="16" />
+            </span>
+            <span>Diários</span>
+        </a>
+
+        <a class="@NavClass("Quizzes")" asp-controller="Quizzes" asp-action="@(isTeacher ? "Results" : "Index")">
+            <span class="app-nav-icon">
+                <img src="~/img/icons/icon-nav-quiz.svg" asp-append-version="true" alt="" width="18" height="18" />
+            </span>
+            <span>Quizzes</span>
+        </a>
+
+        @if (isTeacher)
+        {
+            <a class="@(coursesActive ? "app-nav-link is-active" : "app-nav-link")" asp-controller="Classes" asp-action="Index">
+                <span class="app-nav-icon">
+                    <img src="~/img/icons/icon-nav-course.svg" asp-append-version="true" alt="" width="22" height="18" />
+                </span>
+                <span>Turmas</span>
+            </a>
+            <a class="@NavClass("Courses", "Syllabus")" asp-controller="Courses" asp-action="Syllabus">
+                <span class="app-nav-icon">
+                    <img src="~/img/icons/icon-diary.svg" asp-append-version="true" alt="" width="18" height="18" />
+                </span>
+                <span>Ementa</span>
+            </a>
+        }
+        else
+        {
+            <a class="@NavClass("Lessons")" asp-controller="Lessons" asp-action="Index">
+                <span class="app-nav-icon">
+                    <img src="~/img/icons/icon-nav-course.svg" asp-append-version="true" alt="" width="22" height="18" />
+                </span>
+                <span>Conteúdos</span>
+            </a>
+            <a class="@NavClass("Classes", "Join")" asp-controller="Classes" asp-action="Join">
+                <span class="app-nav-icon">
+                    <img src="~/img/icons/icon-course.svg" asp-append-version="true" alt="" width="18" height="18" />
+                </span>
+                <span>Entrar na turma</span>
+            </a>
+        }
+
+        <a class="app-nav-link" asp-area="Identity" asp-page="/Account/Manage/Index">
+            <span class="app-nav-icon">
+                <img src="~/img/icons/icon-nav-settings.svg" asp-append-version="true" alt="" width="20" height="20" />
+            </span>
+            <span>Conta</span>
+        </a>
+    </nav>
+
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var user = await UserManager.GetUserAsync(User);
+        var displayName = string.IsNullOrWhiteSpace(user?.FullName)
+            ? UserManager.GetUserName(User) ?? "Conta"
+            : user!.FullName;
+        var initial = char.ToUpperInvariant(displayName.Trim()[0]);
+        var roleLabel = isTeacher ? "Docência" : "Estudante";
+
+        <div class="app-side-user">
+            <span class="app-side-avatar" aria-hidden="true">@initial</span>
+            <div class="app-side-user-meta">
+                <span class="app-side-user-name">@displayName</span>
+                <span class="app-side-user-role">@roleLabel</span>
+            </div>
+            <form asp-area="Identity" asp-page="/Account/Logout"
+                  asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                <button type="submit" class="app-side-logout" title="Sair" aria-label="Sair">
+                    <img src="~/img/icons/icon-logout.svg" asp-append-version="true" alt="" width="11" height="11" />
+                </button>
+            </form>
+        </div>
+    }
+</aside>

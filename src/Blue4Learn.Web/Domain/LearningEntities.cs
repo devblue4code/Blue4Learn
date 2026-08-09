@@ -20,6 +20,7 @@ public class Course
     public string Description { get; set; } = string.Empty;
     public ICollection<Module> Modules { get; set; } = [];
     public ICollection<ClassGroup> Classes { get; set; } = [];
+    public ICollection<Quiz> Quizzes { get; set; } = [];
 }
 
 public class Module
@@ -165,4 +166,42 @@ public class ConceptMark
     public Guid ConceptId { get; set; }
     public Concept Concept { get; set; } = null!;
     public bool Understood { get; set; }
+}
+
+public class Quiz
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid CourseId { get; set; }
+    public Course Course { get; set; } = null!;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsPublished { get; set; } = true;
+    public ICollection<QuizQuestion> Questions { get; set; } = [];
+    public ICollection<QuizAttempt> Attempts { get; set; } = [];
+}
+
+public class QuizQuestion
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid QuizId { get; set; }
+    public Quiz Quiz { get; set; } = null!;
+    public string Prompt { get; set; } = string.Empty;
+    public string OptionA { get; set; } = string.Empty;
+    public string OptionB { get; set; } = string.Empty;
+    public string OptionC { get; set; } = string.Empty;
+    public string OptionD { get; set; } = string.Empty;
+    public string CorrectOption { get; set; } = "A";
+    public int SortOrder { get; set; }
+}
+
+public class QuizAttempt
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid QuizId { get; set; }
+    public Quiz Quiz { get; set; } = null!;
+    public string UserId { get; set; } = string.Empty;
+    public ApplicationUser User { get; set; } = null!;
+    public int Score { get; set; }
+    public int MaxScore { get; set; }
+    public DateTime SubmittedAtUtc { get; set; } = DateTime.UtcNow;
 }

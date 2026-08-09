@@ -1,0 +1,96 @@
+@model ClassJournalsViewModel
+@{
+    ViewData["Title"] = "Diários da turma";
+    ViewData["TopTitle"] = "Diários";
+    var filter = ViewData["JournalFilter"] as string ?? "all";
+    string FilterClass(string key) => filter == key ? "btn btn-primary" : "btn btn-outline-primary";
+    var reviewCount = Model.Entries.Count(e => e.NeedsReview);
+    var questionCount = Model.Entries.Sum(e => e.OpenQuestions);
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.CourseTitle · @Model.ClassName</p>
+        <h1>Diários da turma</h1>
+        <p class="section-lead">Acompanhe registros, reflexões e pedidos de revisão dos estudantes.</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Dashboard">Painel</a>
+</div>
+
+<section class="soft-panel mb-4 journal-summary">
+    <div class="d-flex flex-wrap gap-4">
+        <div>
+            <strong class="fs-3">@Model.Entries.Count</strong>
+            <span class="text-muted ms-1">registros</span>
+        </div>
+        <div>
+            <strong class="fs-3">@reviewCount</strong>
+            <span class="text-muted ms-1">para revisar</span>
+        </div>
+        <div>
+            <strong class="fs-3">@questionCount</strong>
+            <span class="text-muted ms-1">dúvidas abertas</span>
+        </div>
+    </div>
+</section>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a class="@FilterClass("all")" asp-action="Journals" asp-route-filter="all">Todos</a>
+    <a class="@FilterClass("review")" asp-action="Journals" asp-route-filter="review">Precisam revisar</a>
+    <a class="@FilterClass("questions")" asp-action="Journals" asp-route-filter="questions">Com dúvidas</a>
+</div>
+
+@if (!Model.Entries.Any())
+{
+    <div class="soft-panel">
+        <p class="mb-0 text-muted">Nenhum diário neste filtro ainda.</p>
+    </div>
+}
+else
+{
+    <div class="journal-feed">
+        @foreach (var entry in Model.Entries)
+        {
+            <article class="soft-panel journal-card @(entry.NeedsReview ? "is-review" : null)">
+                <div class="d-flex justify-content-between gap-3 flex-wrap mb-2">
+                    <div>
+                        <h2 class="h5 mb-1">@entry.StudentName</h2>
+                        <p class="text-muted mb-0">@entry.LessonTitle</p>
+                    </div>
+                    <div class="text-end">
+                        @if (entry.NeedsReview)
+                        {
+                            <span class="status-pill" style="background:#fff3cd;color:#92400e">Revisar</span>
+                        }
+                        <div class="small text-muted mt-1">@entry.UpdatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(entry.Reflection))
+                {
+                    <p class="mb-3">@(entry.Reflection.Length > 280 ? entry.Reflection[..280] + "…" : entry.Reflection)</p>
+                }
+                else
+                {
+                    <p class="text-muted mb-3">Sem reflexão registrada.</p>
+                }
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @if (entry.UnderstoodObjective)
+                    {
+                        <span class="prog-chip">Objetivo ok</span>
+                    }
+                    @if (entry.OpenQuestions > 0)
+                    {
+                        <span class="prog-chip is-warn">@entry.OpenQuestions dúvida(s)</span>
+                    }
+                </div>
+
+                <div class="d-flex gap-3">
+                    <a asp-action="Student" asp-route-id="@entry.StudentUserId">Ver aluno</a>
+                    <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@entry.LessonId">Abrir aula</a>
+                </div>
+            </article>
+        }
+    </div>
+}

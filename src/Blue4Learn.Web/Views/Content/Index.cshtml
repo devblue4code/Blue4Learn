@@ -1,15 +1,21 @@
 @model ContentLibraryViewModel
 @{
-    ViewData["Title"] = "Publicar conteúdos";
+    ViewData["Title"] = "Conteúdos da turma";
+    ViewData["ShowCrumbs"] = true;
+    ViewData["CrumbParent"] = "Gestão de cursos";
+    ViewData["CrumbCurrent"] = "Conteúdos";
 }
 
 <div class="page-header">
     <div>
         <p class="eyebrow">@Model.CourseTitle</p>
-        <h1>Conteúdos da disciplina</h1>
+        <h1>Conteúdos da turma</h1>
         <p class="section-lead">Escreva em Markdown, defina conceitos e publique quando a aula estiver pronta.</p>
     </div>
-    <a class="btn btn-primary" asp-action="Create">Nova aula</a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Index">Componentes</a>
+        <a class="btn btn-primary" asp-action="Create">Nova aula</a>
+    </div>
 </div>
 
 @if (!Model.Lessons.Any())

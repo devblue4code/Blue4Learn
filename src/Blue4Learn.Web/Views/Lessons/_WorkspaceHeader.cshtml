@@ -1,12 +1,9 @@
 @model LessonWorkspaceViewModel
-
-<nav class="ws-crumb" aria-label="Navegação da aula">
-    <a asp-controller="Lessons" asp-action="Index">Conteúdos</a>
-    <span>/</span>
-    <span>@Model.ModuleTitle</span>
-    <span>/</span>
-    <strong>Aula @Model.SortOrder</strong>
-</nav>
+@{
+    ViewData["ShowCrumbs"] = true;
+    ViewData["CrumbParent"] = Model.ModuleTitle;
+    ViewData["CrumbCurrent"] = Model.Title;
+}
 
 <header class="ws-page-head">
     <div>
@@ -18,7 +15,3 @@
         }
     </div>
 </header>
-
-<div class="ws-tools-sticky">
-    <partial name="_WorkspaceNav" model="Model" />
-</div>

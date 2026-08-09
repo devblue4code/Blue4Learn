@@ -1,0 +1,91 @@
+@model SyllabusViewModel
+@{
+    ViewData["Title"] = $"Ementa · {Model.CourseTitle}";
+    ViewData["ShowCrumbs"] = true;
+    ViewData["CrumbParent"] = "Gestão de cursos";
+    ViewData["CrumbCurrent"] = Model.CourseTitle;
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Ementa</p>
+        <h1>@Model.CourseTitle</h1>
+        @if (!string.IsNullOrEmpty(Model.ClassName))
+        {
+            <p class="section-lead">@Model.ClassName @(!string.IsNullOrEmpty(Model.ClassCode) ? $"· {Model.ClassCode}" : null)</p>
+        }
+    </div>
+    @if (User.IsInRole(AppRoles.Teacher) || User.IsInRole(AppRoles.Admin))
+    {
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Index">Componentes</a>
+            <a class="btn btn-outline-primary" asp-controller="Content" asp-action="Index">Conteúdos</a>
+            <a class="btn btn-primary" asp-controller="Classes" asp-action="Index">Turmas</a>
+        </div>
+    }
+</div>
+
+<div class="syllabus-grid">
+    <div class="syllabus-main">
+        <section class="soft-panel">
+            <h2 class="h5 mb-3"><i class="bi bi-journal-bookmark me-2 text-primary"></i>Ementa</h2>
+            <p class="mb-0 section-lead" style="max-width:none">@Model.Description</p>
+        </section>
+
+        <section class="soft-panel mt-3">
+            <h2 class="h5 mb-3"><i class="bi bi-list-ul me-2 text-primary"></i>Conteúdos programáticos</h2>
+            @if (!Model.Modules.Any())
+            {
+                <p class="text-muted mb-0">Nenhum módulo cadastrado ainda.</p>
+            }
+            else
+            {
+                <ol class="syllabus-modules">
+                    @foreach (var module in Model.Modules)
+                    {
+                        <li>
+                            <strong>@module.SortOrder. @module.Title</strong>
+                            @if (module.Lessons.Any())
+                            {
+                                <ul>
+                                    @foreach (var lesson in module.Lessons)
+                                    {
+                                        <li>
+                                            <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lesson.Id">
+                                                @lesson.SortOrder. @lesson.Title
+                                            </a>
+                                            @if (!string.IsNullOrWhiteSpace(lesson.Objective))
+                                            {
+                                                <span class="text-muted d-block small">@lesson.Objective</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+    </div>
+
+    <aside class="syllabus-aside">
+        <section class="soft-panel">
+            <h2 class="h6 text-uppercase text-muted mb-3">Resumo</h2>
+            <div class="d-flex flex-column gap-3">
+                <div>
+                    <div class="text-muted small">Módulos</div>
+                    <strong class="fs-4">@Model.Modules.Count</strong>
+                </div>
+                <div>
+                    <div class="text-muted small">Aulas</div>
+                    <strong class="fs-4">@Model.Modules.Sum(m => m.Lessons.Count)</strong>
+                </div>
+                <div>
+                    <div class="text-muted small">Publicadas</div>
+                    <strong class="fs-4">@Model.Modules.SelectMany(m => m.Lessons).Count(l => l.Status == ContentStatus.Published)</strong>
+                </div>
+            </div>
+        </section>
+    </aside>
+</div>

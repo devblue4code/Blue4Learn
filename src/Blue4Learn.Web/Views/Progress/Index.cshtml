@@ -1,7 +1,9 @@
 @model MyProgressViewModel
 @{
     ViewData["Title"] = "Meu diário";
+    ViewData["TopTitle"] = "Diários";
     string ActivityLabel(ActivityStatus? status) => status switch
+
     {
         ActivityStatus.NotStarted => "Atividade não iniciada",
         ActivityStatus.InProgress => "Atividade em andamento",

@@ -1,6 +1,7 @@
 @model LessonWorkspaceViewModel
 @{
     ViewData["Title"] = $"Atividade · {Model.Title}";
+    ViewData["WorkspaceSection"] = "activity";
     var activity = Model.Activity;
     var isReviewed = activity?.Status == ActivityStatus.Reviewed;
     string ActivityStatusLabel(ActivityStatus status) => status switch
@@ -15,7 +16,9 @@
 
 <article class="ws ws-page">
     <partial name="_WorkspaceHeader" model="Model" />
-
+    <div class="ws-layout">
+        <partial name="_WorkspaceNav" model="Model" />
+        <div class="ws-main-col">
     @if (activity is null)
     {
         <section class="soft-panel ws-panel ws-page-form">
@@ -39,7 +42,7 @@
             <div class="ws-panel-head">
                 <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                     <div>
-                        <h2>Atividade</h2>
+                        <h2>Atividade prática</h2>
                         <p>@activity.Title</p>
                     </div>
                     <span class="prog-chip @(isReviewed ? null : activity.Status == ActivityStatus.Submitted ? "is-warn" : "is-muted")">
@@ -96,4 +99,6 @@
             <partial name="_WorkspaceNextStep" model="Model" />
         }
     }
+        </div>
+    </div>
 </article>

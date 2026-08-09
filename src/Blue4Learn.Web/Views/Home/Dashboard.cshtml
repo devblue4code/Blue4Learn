@@ -1,6 +1,7 @@
 @model HomeDashboardViewModel
 @{
     ViewData["Title"] = "Início";
+    ViewData["TopTitle"] = "Painel";
     var hour = DateTime.Now.Hour;
     var greeting = hour < 12
         ? "Bom dia"
