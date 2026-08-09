@@ -132,9 +132,10 @@
   flex-direction: column;
   justify-content: center;
   background:
-    radial-gradient(800px 300px at 80% 0%, rgba(37, 99, 235, 0.08), transparent 55%),
-    #f8fafc;
+    radial-gradient(800px 300px at 80% 0%, var(--glow-a), transparent 55%),
+    var(--bg);
   padding: clamp(1.5rem, 4vw, 3rem);
+  position: relative;
 }
 
 .auth-panel-inner {
@@ -183,11 +184,12 @@
 }
 
 .auth-form .form-control {
-  border: 1px solid #d7e0ec;
+  border: 1px solid var(--line);
   border-radius: 12px;
   min-height: 3rem;
   padding: .7rem 0.95rem;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--text);
   box-shadow: none;
   transition: border-color .15s ease, box-shadow .15s ease;
 }

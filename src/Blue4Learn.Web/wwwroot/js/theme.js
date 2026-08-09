@@ -15,7 +15,8 @@
 
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
-    document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
+    const buttons = document.querySelectorAll("[data-theme-toggle]");
+    buttons.forEach((btn) => {
       const next = theme === "dark" ? "claro" : "escuro";
       btn.setAttribute("aria-label", `Ativar tema ${next}`);
       btn.title = `Tema ${next}`;
@@ -28,20 +29,52 @@
     applyTheme(next);
   }
 
+  // Apply ASAP to reduce flash when preference is stored.
   applyTheme(currentTheme());
 
-  function mountToggle() {
-    if (!document.querySelector("[data-theme-toggle]")) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "theme-toggle theme-toggle-auth";
-      btn.setAttribute("data-theme-toggle", "");
-      btn.innerHTML = sunIcon + moonIcon;
-      btn.addEventListener("click", toggleTheme);
-      document.body.appendChild(btn);
-    }
-    applyTheme(currentTheme());
+  function createToggle(extraClass) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = extraClass ? `theme-toggle ${extraClass}` : "theme-toggle";
+    btn.setAttribute("data-theme-toggle", "");
+    btn.innerHTML = sunIcon + moonIcon;
+    btn.addEventListener("click", toggleTheme);
+    return btn;
   }
+
+  function mountToggle() {
+    if (document.querySelector("[data-theme-toggle]")) {
+      applyTheme(currentTheme());
+      return;
+    }
+
+    const topActions = document.querySelector(".app-top-actions");
+    if (topActions) {
+      topActions.prepend(createToggle());
+      applyTheme(currentTheme());
+      return;
+    }
+
+    const account = document.querySelector(".nav-account");
+    if (account) {
+      account.prepend(createToggle());
+      applyTheme(currentTheme());
+      return;
+    }
+
+    if (document.body.classList.contains("auth-body")) {
+      document.body.appendChild(createToggle("theme-toggle-auth"));
+      applyTheme(currentTheme());
+    }
+  }
+
+  window.Blue4Learn = window.Blue4Learn || {};
+  window.Blue4Learn.setTheme = (theme) => {
+    if (theme !== "light" && theme !== "dark") return;
+    localStorage.setItem(KEY, theme);
+    applyTheme(theme);
+  };
+  window.Blue4Learn.toggleTheme = toggleTheme;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mountToggle);
@@ -49,19 +82,7 @@
     mountToggle();
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("[data-fill-login]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const email = button.getAttribute("data-email");
-        const password = button.getAttribute("data-password");
-        const emailInput = document.getElementById("Input_Email");
-        const passwordInput = document.getElementById("Input_Password");
-        if (emailInput && email) emailInput.value = email;
-        if (passwordInput && password) {
-          passwordInput.value = password;
-          passwordInput.focus();
-        }
-      });
-    });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (!localStorage.getItem(KEY)) applyTheme(systemTheme());
   });
 })();

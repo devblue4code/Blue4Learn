@@ -95,13 +95,13 @@ public class JournalFormViewModel
 {
     public Guid LessonId { get; set; }
 
-    [Display(Name = "Anotação privada")]
+    [Display(Name = "Anotação privada (opcional)")]
     [StringLength(4000)]
-    public string Note { get; set; } = string.Empty;
+    public string? Note { get; set; }
 
-    [Display(Name = "Reflexão final")]
+    [Display(Name = "Reflexão final (opcional)")]
     [StringLength(4000)]
-    public string Reflection { get; set; } = string.Empty;
+    public string? Reflection { get; set; }
 
     [Display(Name = "Compreendi o objetivo da aula")]
     public bool UnderstoodObjective { get; set; }
@@ -112,7 +112,7 @@ public class JournalFormViewModel
     [Display(Name = "Preciso revisar este conteúdo")]
     public bool NeedsReview { get; set; }
 
-    [Display(Name = "Nova dúvida")]
+    [Display(Name = "Nova dúvida (opcional)")]
     [StringLength(1000)]
     public string? NewQuestion { get; set; }
 

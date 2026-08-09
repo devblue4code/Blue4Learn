@@ -19,6 +19,17 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" />
     <link rel="stylesheet" href="~/css/app-shell.css" asp-append-version="true" />
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('b4l-theme');
+                if (t !== 'light' && t !== 'dark') {
+                    t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { }
+        })();
+    </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="@bodyClass">
@@ -80,6 +91,7 @@ else
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="~/js/theme.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

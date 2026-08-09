@@ -31,7 +31,17 @@ builder.Services
 builder.Services.AddScoped<IMarkdownService, MarkdownService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
-builder.Services.AddTransient<IEmailSender, DevelopmentEmailSender>();
+
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
+builder.Services.AddTransient<DevelopmentEmailSender>();
+builder.Services.AddTransient<SmtpEmailSender>();
+builder.Services.AddTransient<IEmailSender>(sp =>
+{
+    var smtp = sp.GetRequiredService<IOptions<SmtpOptions>>().Value;
+    return smtp.IsConfigured
+        ? sp.GetRequiredService<SmtpEmailSender>()
+        : sp.GetRequiredService<DevelopmentEmailSender>();
+});
 
 builder.Services.Configure<AiTutorOptions>(builder.Configuration.GetSection(AiTutorOptions.SectionName));
 builder.Services.AddSingleton<HeuristicAiTutorService>();

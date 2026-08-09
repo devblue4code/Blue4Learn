@@ -46,7 +46,7 @@
             <div class="ws-step">
                 <span class="ws-step-n">2</span>
                 <div class="ws-step-body">
-                    <label class="form-label">Conceitos</label>
+                    <label class="form-label">Conceitos <span class="text-muted fw-normal">(opcional)</span></label>
                     <p class="ws-hint">Marque os que apareceram e, à direita, se você compreendeu.</p>
                     <div class="concept-list">
                         <div class="concept-legend">
@@ -73,7 +73,7 @@
         <div class="ws-step">
             <span class="ws-step-n">@(Model.Concepts.Any() ? "3" : "2")</span>
             <div class="ws-step-body">
-                <label class="form-label">Checklist</label>
+                <label class="form-label">Checklist <span class="text-muted fw-normal">(opcional)</span></label>
                 <div class="checklist ws-checklist">
                     <label class="ws-check">
                         <input asp-for="Journal.UnderstoodObjective" />
