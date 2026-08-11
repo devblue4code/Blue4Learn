@@ -59,6 +59,7 @@ public class SubmissionReviewViewModel
     public Guid LessonId { get; set; }
     public string ActivityTitle { get; set; } = string.Empty;
     public string Prompt { get; set; } = string.Empty;
+    public string PromptHtml { get; set; } = string.Empty;
     public string ProblemDescription { get; set; } = string.Empty;
     public string SolutionDescription { get; set; } = string.Empty;
     public string TextResponse { get; set; } = string.Empty;

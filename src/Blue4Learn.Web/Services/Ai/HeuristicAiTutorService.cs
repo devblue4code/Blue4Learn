@@ -112,6 +112,132 @@ public partial class HeuristicAiTutorService : IAiTutorService
         return Task.FromResult<IReadOnlyList<string>>(questions.Distinct().Take(4).ToList());
     }
 
+    public Task<EvidenceAnalysisResult> AnalyzeEvidenceAsync(
+        EvidenceAnalysisRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var checklist = BuildHeuristicChecklist(request);
+        var met = checklist.Count(c => c.Status == "met");
+        var partial = checklist.Count(c => c.Status == "partial");
+        var missing = checklist.Count(c => c.Status == "missing");
+
+        var commitLine = request.Commits.Count > 0
+            ? $"Repositório com {request.Commits.Count} commit(s); {request.Commits.Sum(c => c.Files.Count)} ficheiro(s) alterado(s) nos diffs; último em {request.Commits[0].Date}."
+            : string.IsNullOrWhiteSpace(request.GitHubUrl)
+                ? "Sem link de GitHub na entrega."
+                : "Link de GitHub informado, mas não foi possível listar commits.";
+
+        var summary =
+            $"Entrega de “{request.ActivityTitle}”: {met} atendimento(s) completo(s), {partial} parcial(is), {missing} em falta. {commitLine}";
+
+        var gaps = checklist.Where(c => c.Status != "met").Select(c => c.Item).Take(3).ToList();
+        var feedback = gaps.Count == 0
+            ? "Bom trabalho — os elementos principais pedidos na atividade aparecem na entrega. Revise os detalhes e confirme se a evidência cobre bem o objetivo da aula."
+            : $"Obrigada pela entrega. Para fechar a atividade, priorize: {string.Join("; ", gaps)}. " +
+              "Quando atualizar, descreva brevemente o que mudou e (se houver) o commit correspondente.";
+
+        return Task.FromResult(new EvidenceAnalysisResult
+        {
+            Summary = summary,
+            Checklist = checklist,
+            FeedbackDraft = feedback,
+            UsedLlm = false
+        });
+    }
+
+    private static List<EvidenceChecklistItem> BuildHeuristicChecklist(EvidenceAnalysisRequest request)
+    {
+        var items = new List<EvidenceChecklistItem>
+        {
+            FieldItem("Descrição do problema", request.ProblemDescription),
+            FieldItem("Descrição da solução", request.SolutionDescription),
+            FieldItem("Evidência textual", request.TextResponse),
+            new EvidenceChecklistItem
+            {
+                Item = "Link do repositório GitHub",
+                Status = string.IsNullOrWhiteSpace(request.GitHubUrl) ? "missing" : "met",
+                EvidenceNote = string.IsNullOrWhiteSpace(request.GitHubUrl)
+                    ? "Não informado"
+                    : request.GitHubUrl!
+            },
+            new EvidenceChecklistItem
+            {
+                Item = "Anexos de evidência",
+                Status = request.AttachmentNames.Count > 0 ? "met" : "missing",
+                EvidenceNote = request.AttachmentNames.Count > 0
+                    ? string.Join(", ", request.AttachmentNames)
+                    : "Nenhum anexo"
+            },
+            new EvidenceChecklistItem
+            {
+                Item = "Histórico de commits (datas e alterações)",
+                Status = request.Commits.Count == 0
+                    ? (string.IsNullOrWhiteSpace(request.GitHubUrl) ? "missing" : "partial")
+                    : request.Commits.Any(c => c.Files.Count > 0) ? "met" : "partial",
+                EvidenceNote = request.Commits.Count > 0
+                    ? string.Join(" · ", request.Commits.Take(3).Select(c =>
+                    {
+                        var files = c.Files.Count == 0
+                            ? "sem diff"
+                            : string.Join(", ", c.Files.Take(3).Select(f => f.Filename));
+                        return $"{c.Date}: {c.Message} ({files})";
+                    }))
+                    : "Sem commits listados"
+            }
+        };
+
+        // Itens derivados de bullets / linhas do enunciado.
+        foreach (var req in ExtractPromptRequirements(request.Prompt).Take(4))
+        {
+            var haystack = string.Join('\n',
+                request.ProblemDescription,
+                request.SolutionDescription,
+                request.TextResponse,
+                request.GitHubUrl,
+                string.Join(' ', request.AttachmentNames),
+                string.Join(' ', request.Commits.SelectMany(c => c.Files.Select(f => f.Filename + " " + (f.PatchExcerpt ?? "")))));
+            var hit = req.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(w => w.Length >= 4)
+                .Any(w => haystack.Contains(w, StringComparison.OrdinalIgnoreCase));
+            items.Add(new EvidenceChecklistItem
+            {
+                Item = Trim(req, 100),
+                Status = hit ? "partial" : "missing",
+                EvidenceNote = hit ? "Possível cobertura no texto/evidência" : "Não encontrado claramente na entrega"
+            });
+        }
+
+        return items;
+    }
+
+    private static EvidenceChecklistItem FieldItem(string label, string value)
+    {
+        var has = !string.IsNullOrWhiteSpace(value);
+        return new EvidenceChecklistItem
+        {
+            Item = label,
+            Status = has ? (value.Trim().Length < 40 ? "partial" : "met") : "missing",
+            EvidenceNote = has ? Trim(value, 120) : "Em falta"
+        };
+    }
+
+    private static IEnumerable<string> ExtractPromptRequirements(string? prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            yield break;
+        }
+
+        foreach (Match m in BulletRegex().Matches(prompt))
+        {
+            var text = Clean(m.Groups[1].Value);
+            if (text.Length >= 8)
+            {
+                yield return text;
+            }
+        }
+    }
+
     private static IEnumerable<string> SplitWords(string text) =>
         WordRegex().Matches(text).Select(m => m.Value);
 
@@ -135,4 +261,7 @@ public partial class HeuristicAiTutorService : IAiTutorService
 
     [GeneratedRegex(@"[\p{L}][\p{L}\p{N}-]{3,}", RegexOptions.IgnoreCase)]
     private static partial Regex WordRegex();
+
+    [GeneratedRegex(@"^\s*[-*•]\s+(.+)$", RegexOptions.Multiline)]
+    private static partial Regex BulletRegex();
 }

@@ -383,9 +383,21 @@ namespace Blue4Learn.Web.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Methodologies")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Syllabus")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TeacherUserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("TenantId")
@@ -397,6 +409,8 @@ namespace Blue4Learn.Web.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TeacherUserId");
 
                     b.HasIndex("TenantId", "Slug")
                         .IsUnique();
@@ -850,11 +864,18 @@ namespace Blue4Learn.Web.Data.Migrations
 
             modelBuilder.Entity("Blue4Learn.Web.Domain.Course", b =>
                 {
+                    b.HasOne("Blue4Learn.Web.Domain.ApplicationUser", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Blue4Learn.Web.Domain.Tenant", "Tenant")
                         .WithMany("Courses")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Teacher");
 
                     b.Navigation("Tenant");
                 });

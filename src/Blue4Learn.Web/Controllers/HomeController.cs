@@ -47,23 +47,43 @@ public class HomeController : Controller
         var isTeacher = await _access.IsTeacherOrAdminAsync(user);
         var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
 
-        var classIds = await _db.Enrollments
-            .Where(e => e.UserId == user.Id)
-            .Select(e => e.ClassGroupId)
-            .ToListAsync();
+        List<ClassSummaryViewModel> classes;
+        if (isTeacher)
+        {
+            classes = await _db.ClassGroups
+                .AsNoTracking()
+                .Where(c => courseIds.Contains(c.CourseId))
+                .OrderBy(c => c.Name)
+                .Select(c => new ClassSummaryViewModel
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Code = c.Code,
+                    CourseTitle = c.Course.Title,
+                    StudentCount = c.Enrollments.Count
+                })
+                .ToListAsync();
+        }
+        else
+        {
+            var classIds = await _db.Enrollments
+                .Where(e => e.UserId == user.Id)
+                .Select(e => e.ClassGroupId)
+                .ToListAsync();
 
-        var classes = await _db.ClassGroups
-            .AsNoTracking()
-            .Where(c => classIds.Contains(c.Id))
-            .Select(c => new ClassSummaryViewModel
-            {
-                Id = c.Id,
-                Name = c.Name,
-                Code = c.Code,
-                CourseTitle = c.Course.Title,
-                StudentCount = c.Enrollments.Count
-            })
-            .ToListAsync();
+            classes = await _db.ClassGroups
+                .AsNoTracking()
+                .Where(c => classIds.Contains(c.Id))
+                .Select(c => new ClassSummaryViewModel
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Code = c.Code,
+                    CourseTitle = c.Course.Title,
+                    StudentCount = c.Enrollments.Count
+                })
+                .ToListAsync();
+        }
 
         var lessons = await _db.Lessons
             .AsNoTracking()

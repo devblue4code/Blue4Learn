@@ -15,9 +15,16 @@ public class Course
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid TenantId { get; set; }
     public Tenant Tenant { get; set; } = null!;
+    /// <summary>Professora responsável pela disciplina (vê só esta disciplina e suas turmas).</summary>
+    public string? TeacherUserId { get; set; }
+    public ApplicationUser? Teacher { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    /// <summary>Texto completo da ementa (Markdown).</summary>
+    public string Syllabus { get; set; } = string.Empty;
+    /// <summary>Metodologias de ensino (Markdown).</summary>
+    public string Methodologies { get; set; } = string.Empty;
     public ICollection<Module> Modules { get; set; } = [];
     public ICollection<ClassGroup> Classes { get; set; } = [];
     public ICollection<Quiz> Quizzes { get; set; } = [];

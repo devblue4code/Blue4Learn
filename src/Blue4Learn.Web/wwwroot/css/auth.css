@@ -245,57 +245,6 @@
   padding-left: 1.1rem;
 }
 
-.auth-demo {
-  margin-top: 1.5rem;
-  padding: 1rem 1.1rem;
-  border-radius: 14px;
-  border: 1px dashed #c7d7ef;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.auth-demo strong {
-  display: block;
-  color: var(--blue-deep);
-  margin-bottom: .55rem;
-  font-size: .92rem;
-}
-
-.auth-demo-grid {
-  display: grid;
-  gap: .45rem;
-}
-
-.auth-demo-btn {
-  width: 100%;
-  text-align: left;
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 10px;
-  padding: .65rem .8rem;
-  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
-}
-
-.auth-demo-btn:hover {
-  border-color: #93c5fd;
-  box-shadow: 0 8px 20px rgba(23, 37, 84, 0.06);
-  transform: translateY(-1px);
-}
-
-.auth-demo-btn span {
-  display: block;
-  font-size: .78rem;
-  color: var(--muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-
-.auth-demo-btn code {
-  font-family: var(--mono);
-  font-size: .82rem;
-  color: var(--blue-deep);
-}
-
 .auth-success {
   background: #ecfdf5;
   color: #065f46;

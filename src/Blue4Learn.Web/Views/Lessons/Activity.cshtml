@@ -51,7 +51,9 @@
                 </div>
             </div>
 
-            <p class="ws-activity-prompt">@activity.Prompt</p>
+            <div class="ws-activity-prompt markdown-body">
+                @Html.Raw(activity.PromptHtml)
+            </div>
             @if (activity.DueAtUtc is DateTime due)
             {
                 <p class="ws-hint mb-3">Prazo: @due.ToLocalTime().ToString("dd/MM/yyyy")</p>

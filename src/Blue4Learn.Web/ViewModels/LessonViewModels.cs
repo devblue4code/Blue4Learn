@@ -134,6 +134,7 @@ public class ActivityFormViewModel
     public Guid ActivityId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Prompt { get; set; } = string.Empty;
+    public string PromptHtml { get; set; } = string.Empty;
     public DateTime? DueAtUtc { get; set; }
 
     [Display(Name = "Descrição do problema")]

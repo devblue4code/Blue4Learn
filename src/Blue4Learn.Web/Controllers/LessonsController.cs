@@ -179,6 +179,7 @@ public class LessonsController : Controller
                 ActivityId = activity.Id,
                 Title = activity.Title,
                 Prompt = activity.Prompt,
+                PromptHtml = _markdown.ToSafeHtml(activity.Prompt),
                 DueAtUtc = activity.DueAtUtc,
                 ProblemDescription = submission?.ProblemDescription ?? string.Empty,
                 SolutionDescription = submission?.SolutionDescription ?? string.Empty,

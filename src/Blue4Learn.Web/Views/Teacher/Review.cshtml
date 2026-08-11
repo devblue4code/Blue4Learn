@@ -16,11 +16,15 @@
     <div class="col-lg-7">
         <section class="soft-panel">
             <h2 class="h5">@Model.ActivityTitle</h2>
-            <p class="text-muted">@Model.Prompt</p>
-            <p><strong>Problema:</strong> @(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "—" : Model.ProblemDescription)</p>
-            <p><strong>Solução:</strong> @(string.IsNullOrWhiteSpace(Model.SolutionDescription) ? "—" : Model.SolutionDescription)</p>
+            <div class="ws-activity-prompt markdown-body mb-3">
+                @Html.Raw(Model.PromptHtml)
+            </div>
+            <p><strong>Problema:</strong></p>
+            <p class="text-break" style="white-space: pre-wrap">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "—" : Model.ProblemDescription)</p>
+            <p><strong>Solução:</strong></p>
+            <p class="text-break" style="white-space: pre-wrap">@(string.IsNullOrWhiteSpace(Model.SolutionDescription) ? "—" : Model.SolutionDescription)</p>
             <p><strong>Evidência textual:</strong></p>
-            <p>@(string.IsNullOrWhiteSpace(Model.TextResponse) ? "—" : Model.TextResponse)</p>
+            <p class="text-break" style="white-space: pre-wrap">@(string.IsNullOrWhiteSpace(Model.TextResponse) ? "—" : Model.TextResponse)</p>
             @if (!string.IsNullOrWhiteSpace(Model.GitHubUrl))
             {
                 <p><strong>GitHub:</strong> <a href="@Model.GitHubUrl" target="_blank" rel="noopener">@Model.GitHubUrl</a></p>
@@ -38,7 +42,26 @@
                     }
                 </ul>
             }
-            <a asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Abrir aula</a>
+            <a class="btn btn-outline-primary btn-sm" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Abrir aula</a>
+        </section>
+
+        <section class="soft-panel mt-3" id="delivery-report" data-submission-id="@Model.SubmissionId">
+            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Relatório da entrega</h2>
+                    <p class="small text-muted mb-0">Compara o enunciado ao que foi entregue e sugere feedback.</p>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="analyze-delivery-btn">
+                    Analisar entrega
+                </button>
+            </div>
+            <p class="small text-muted" id="analyze-status">Clique em “Analisar entrega” para gerar o relatório.</p>
+            <div id="analyze-summary" class="evidence-report-summary d-none"></div>
+            <div id="analyze-checklist" class="evidence-checklist d-none mt-3"></div>
+            <div id="analyze-commits" class="evidence-commits d-none mt-3"></div>
+            <div class="mt-3 d-none" id="analyze-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="use-feedback-btn">Usar no feedback</button>
+            </div>
         </section>
     </div>
     <div class="col-lg-5">
@@ -61,3 +84,121 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(() => {
+  const panel = document.getElementById("delivery-report");
+  if (!panel) return;
+
+  const submissionId = panel.dataset.submissionId;
+  const btn = document.getElementById("analyze-delivery-btn");
+  const statusEl = document.getElementById("analyze-status");
+  const summaryEl = document.getElementById("analyze-summary");
+  const checklistEl = document.getElementById("analyze-checklist");
+  const commitsEl = document.getElementById("analyze-commits");
+  const actionsEl = document.getElementById("analyze-actions");
+  const useBtn = document.getElementById("use-feedback-btn");
+  const feedback = document.getElementById("teacherFeedback");
+  const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+  let draft = "";
+
+  const statusLabel = { met: "Atendido", partial: "Parcial", missing: "Em falta" };
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  btn?.addEventListener("click", async () => {
+    btn.disabled = true;
+    statusEl.textContent = "A analisar entrega…";
+    statusEl.classList.remove("text-danger");
+    summaryEl.classList.add("d-none");
+    checklistEl.classList.add("d-none");
+    commitsEl.classList.add("d-none");
+    actionsEl.classList.add("d-none");
+
+    try {
+      const body = new URLSearchParams();
+      body.set("__RequestVerificationToken", token || "");
+
+      const res = await fetch(`@Url.Action("Analyze", "Teacher")?id=${encodeURIComponent(submissionId)}`, {
+        method: "POST",
+        headers: { "RequestVerificationToken": token || "", "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
+
+      if (!res.ok) throw new Error("Falha na análise (" + res.status + ")");
+      const data = await res.json();
+      draft = data.feedbackDraft || "";
+
+      summaryEl.innerHTML = `<p class="mb-0">${esc(data.summary)}</p>`;
+      summaryEl.classList.remove("d-none");
+
+      const items = Array.isArray(data.checklist) ? data.checklist : [];
+      checklistEl.innerHTML = `
+        <h3 class="h6 text-uppercase text-muted mb-2">Checklist</h3>
+        <ul class="evidence-checklist-list">
+          ${items.map(i => `
+            <li class="evidence-check is-${esc(i.status)}">
+              <span class="evidence-check-status">${esc(statusLabel[i.status] || i.status)}</span>
+              <div>
+                <strong>${esc(i.item)}</strong>
+                ${i.evidenceNote ? `<div class="small text-muted">${esc(i.evidenceNote)}</div>` : ""}
+              </div>
+            </li>`).join("")}
+        </ul>`;
+      checklistEl.classList.remove("d-none");
+
+      const commits = Array.isArray(data.commits) ? data.commits : [];
+      if (commits.length) {
+        commitsEl.innerHTML = `
+          <h3 class="h6 text-uppercase text-muted mb-2">Commits e alterações</h3>
+          <ul class="evidence-commit-list">
+            ${commits.map(c => `
+              <li>
+                <div class="evidence-commit-head">
+                  <span class="evidence-commit-date">${esc(c.date)}</span>
+                  <code>${esc(c.sha)}</code>
+                  ${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.message)}</a>` : esc(c.message)}
+                  <span class="small text-muted">· ${esc(c.author)}</span>
+                </div>
+                ${Array.isArray(c.files) && c.files.length ? `
+                  <ul class="evidence-commit-files">
+                    ${c.files.map(f => `
+                      <li>
+                        <span class="evidence-file-status">${esc(f.status)}</span>
+                        <code>${esc(f.filename)}</code>
+                        <span class="small text-muted">+${esc(f.additions)} / -${esc(f.deletions)}</span>
+                      </li>`).join("")}
+                  </ul>` : `<div class="small text-muted">Sem diff de ficheiros neste commit.</div>`}
+              </li>`).join("")}
+          </ul>`;
+        commitsEl.classList.remove("d-none");
+      } else {
+        commitsEl.innerHTML = `<p class="small text-muted mb-0">Sem commits listados para este repositório.</p>`;
+        commitsEl.classList.remove("d-none");
+      }
+
+      actionsEl.classList.remove("d-none");
+      statusEl.textContent = data.usedLlm
+        ? "Análise concluída com IA."
+        : "Análise concluída (modo heurístico — configure AiTutor__ApiKey para OpenAI).";
+    } catch (err) {
+      statusEl.textContent = err?.message || "Não foi possível analisar a entrega.";
+      statusEl.classList.add("text-danger");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  useBtn?.addEventListener("click", () => {
+    if (!feedback || !draft) return;
+    feedback.value = draft;
+    feedback.focus();
+  });
+})();
+</script>
+}

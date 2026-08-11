@@ -31,6 +31,16 @@ builder.Services
 builder.Services.AddScoped<IMarkdownService, MarkdownService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = ".Blue4Learn.Session";
+    options.IdleTimeout = TimeSpan.FromDays(14);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+builder.Services.AddScoped<ILearningContextService, LearningContextService>();
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddTransient<DevelopmentEmailSender>();
@@ -55,6 +65,16 @@ builder.Services.AddHttpClient("AiTutor", (sp, client) =>
     client.Timeout = TimeSpan.FromSeconds(45);
 });
 builder.Services.AddScoped<IAiTutorService, OpenAiTutorService>();
+
+builder.Services.Configure<GitHubOptions>(builder.Configuration.GetSection(GitHubOptions.SectionName));
+builder.Services.AddHttpClient("GitHub", client =>
+{
+    client.BaseAddress = new Uri("https://api.github.com/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Blue4Learn/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+builder.Services.AddScoped<IGitHubCommitService, GitHubCommitService>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
@@ -85,6 +105,7 @@ if (!runningInContainer)
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

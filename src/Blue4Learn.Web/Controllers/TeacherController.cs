@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Blue4Learn.Web.Data;
 using Blue4Learn.Web.Domain;
 using Blue4Learn.Web.Services;
+using Blue4Learn.Web.Services.Ai;
 using Blue4Learn.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,22 @@ public class TeacherController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly IAccessService _access;
+    private readonly IMarkdownService _markdown;
+    private readonly IAiTutorService _ai;
+    private readonly IGitHubCommitService _github;
 
-    public TeacherController(ApplicationDbContext db, IAccessService access)
+    public TeacherController(
+        ApplicationDbContext db,
+        IAccessService access,
+        IMarkdownService markdown,
+        IAiTutorService ai,
+        IGitHubCommitService github)
     {
         _db = db;
         _access = access;
+        _markdown = markdown;
+        _ai = ai;
+        _github = github;
     }
 
     public async Task<IActionResult> Dashboard()
@@ -310,6 +322,82 @@ public class TeacherController : Controller
         return RedirectToAction(nameof(Submissions));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Analyze(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _access.GetCurrentUserAsync(User);
+        if (user is null) return Challenge();
+
+        var submission = await LoadSubmissionAsync(id);
+        if (submission is null) return NotFound();
+        if (!await _access.CanViewStudentAsync(user, submission.UserId))
+        {
+            return Forbid();
+        }
+
+        var commits = await _github.GetRecentCommitsAsync(submission.GitHubUrl, 8, cancellationToken);
+        var commitInfos = commits.Select(c => new EvidenceCommitInfo
+        {
+            Sha = c.Sha,
+            Message = c.Message,
+            Author = c.Author,
+            Date = c.Date == DateTimeOffset.MinValue
+                ? "—"
+                : c.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+            Files = c.Files.Select(f => new EvidenceCommitFileInfo
+            {
+                Filename = f.Filename,
+                Status = f.Status,
+                Additions = f.Additions,
+                Deletions = f.Deletions,
+                PatchExcerpt = f.PatchExcerpt
+            }).ToList()
+        }).ToList();
+
+        var analysis = await _ai.AnalyzeEvidenceAsync(new EvidenceAnalysisRequest
+        {
+            ActivityTitle = submission.Activity.Title,
+            Prompt = submission.Activity.Prompt,
+            ProblemDescription = submission.ProblemDescription,
+            SolutionDescription = submission.SolutionDescription,
+            TextResponse = submission.TextResponse,
+            GitHubUrl = submission.GitHubUrl,
+            AttachmentNames = submission.Attachments.Select(a => a.OriginalFileName).ToList(),
+            Commits = commitInfos
+        }, cancellationToken);
+
+        return Json(new
+        {
+            summary = analysis.Summary,
+            feedbackDraft = analysis.FeedbackDraft,
+            usedLlm = analysis.UsedLlm,
+            checklist = analysis.Checklist.Select(c => new
+            {
+                item = c.Item,
+                status = c.Status,
+                evidenceNote = c.EvidenceNote
+            }),
+            commits = commits.Select(c => new
+            {
+                sha = c.Sha,
+                message = c.Message,
+                author = c.Author,
+                date = c.Date == DateTimeOffset.MinValue
+                    ? "—"
+                    : c.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+                url = c.Url,
+                files = c.Files.Select(f => new
+                {
+                    filename = f.Filename,
+                    status = f.Status,
+                    additions = f.Additions,
+                    deletions = f.Deletions
+                })
+            })
+        });
+    }
+
     public async Task<IActionResult> Student(string id)
     {
         var teacher = await _access.GetCurrentUserAsync(User);
@@ -402,7 +490,7 @@ public class TeacherController : Controller
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
-    private static SubmissionReviewViewModel ToReviewVm(ActivitySubmission s) => new()
+    private SubmissionReviewViewModel ToReviewVm(ActivitySubmission s) => new()
     {
         SubmissionId = s.Id,
         StudentName = s.User.FullName,
@@ -411,6 +499,7 @@ public class TeacherController : Controller
         LessonId = s.Activity.LessonId,
         ActivityTitle = s.Activity.Title,
         Prompt = s.Activity.Prompt,
+        PromptHtml = _markdown.ToSafeHtml(s.Activity.Prompt),
         ProblemDescription = s.ProblemDescription,
         SolutionDescription = s.SolutionDescription,
         TextResponse = s.TextResponse,

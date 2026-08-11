@@ -45,6 +45,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
             e.Property(x => x.Title).HasMaxLength(200);
             e.Property(x => x.Slug).HasMaxLength(100);
+            e.Property(x => x.TeacherUserId).HasMaxLength(450);
+            e.HasIndex(x => x.TeacherUserId);
+            e.HasOne(x => x.Teacher)
+                .WithMany()
+                .HasForeignKey(x => x.TeacherUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<Lesson>(e =>

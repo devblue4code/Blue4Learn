@@ -107,8 +107,9 @@
             <p>Enunciado que o aluno vê no Workspace para enviar a prática.</p>
         </div>
         <label asp-for="ActivityPrompt" class="form-label"></label>
-        <textarea asp-for="ActivityPrompt" class="form-control" rows="3"
-                  placeholder="Descreva o problema, a solução e anexe o link do repositório."></textarea>
+        <textarea asp-for="ActivityPrompt" class="form-control" rows="8"
+                  placeholder="Pode usar Markdown: listas, **negrito**, `código`, blocos ``` ``` etc."></textarea>
+        <p class="small text-muted mt-1 mb-0">O enunciado é renderizado em Markdown na página da atividade do aluno.</p>
     </section>
 
     <div class="editor-grid">

@@ -1,0 +1,165 @@
+@model PersonFormViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Editar pessoa" : "Nova pessoa";
+    ViewData["ShowCrumbs"] = true;
+    ViewData["CrumbParent"] = "Pessoas";
+    ViewData["CrumbCurrent"] = Model.IsEdit ? Model.FullName : "Nova";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Administração</p>
+        <h1>@(Model.IsEdit ? "Editar pessoa" : "Nova pessoa")</h1>
+        <p class="section-lead">
+            Defina o perfil. Para professora, atribua a disciplina responsável e as turmas.
+        </p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Index">Todas as pessoas</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <form asp-action="Save" method="post" class="soft-panel" id="person-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" autocomplete="name" />
+                <span asp-validation-for="FullName" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+                @if (!Model.IsEdit)
+                {
+                    <p class="small text-muted mt-1 mb-0">Senha inicial: <code>Demo@123</code></p>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Role" class="form-label"></label>
+                <select asp-for="Role" class="form-select" id="Role">
+                    <option value="@AppRoles.Student">@AppRoles.Student</option>
+                    <option value="@AppRoles.Teacher">@AppRoles.Teacher</option>
+                    <option value="@AppRoles.Admin">@AppRoles.Admin</option>
+                </select>
+                <span asp-validation-for="Role" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3" id="course-field" hidden>
+                <label asp-for="CourseId" class="form-label"></label>
+                <select asp-for="CourseId" class="form-select">
+                    <option value="">— Sem disciplina —</option>
+                    @foreach (var course in Model.Courses)
+                    {
+                        <option value="@course.Id">@course.Title</option>
+                    }
+                </select>
+                <span asp-validation-for="CourseId" class="text-danger small"></span>
+                <p class="small text-muted mt-1 mb-0">A professora só vê esta disciplina e as turmas ligadas a ela.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Salvar</button>
+        </form>
+    </div>
+
+    @if (Model.IsEdit)
+    {
+        <div class="col-lg-6">
+            <section class="soft-panel mb-3">
+                <h2 class="h5 mb-3">Turmas matriculadas</h2>
+                @if (!Model.Enrollments.Any())
+                {
+                    <p class="text-muted mb-0">Nenhuma matrícula ainda.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Turma</th>
+                                    <th>Disciplina</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var item in Model.Enrollments)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.ClassName</strong>
+                                        <div class="small text-muted">@item.ClassCode</div>
+                                    </td>
+                                    <td>@item.CourseTitle</td>
+                                    <td class="text-end">
+                                        <form asp-action="Unenroll" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@Model.Id" />
+                                            <input type="hidden" name="enrollmentId" value="@item.EnrollmentId" />
+                                            <button type="submit" class="btn btn-sm btn-link text-danger"
+                                                    onclick="return confirm('Remover esta matrícula?');">
+                                                Remover
+                                            </button>
+                                        </form>
+                                        <a class="btn btn-sm btn-outline-primary"
+                                           asp-controller="Classes" asp-action="Details" asp-route-id="@item.ClassGroupId">
+                                            Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+
+            <form asp-action="Enroll" method="post" class="soft-panel">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <h2 class="h5">Matricular em turma</h2>
+                @if (!Model.AvailableClasses.Any())
+                {
+                    <p class="text-muted mb-0">Não há outras turmas disponíveis neste tenant.</p>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="classGroupId">Turma</label>
+                        <select name="classGroupId" id="classGroupId" class="form-select" required>
+                            <option value="">Selecione…</option>
+                            @foreach (var c in Model.AvailableClasses)
+                            {
+                                <option value="@c.Id">@c.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Matricular</button>
+                }
+            </form>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const role = document.getElementById("Role");
+            const courseField = document.getElementById("course-field");
+            function sync() {
+                const isTeacher = role && role.value === "@AppRoles.Teacher";
+                if (courseField) courseField.hidden = !isTeacher;
+            }
+            if (role) {
+                role.addEventListener("change", sync);
+                sync();
+            }
+        })();
+    </script>
+}

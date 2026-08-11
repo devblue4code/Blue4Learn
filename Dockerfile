@@ -16,7 +16,7 @@ RUN mkdir -p /data /app/App_Data \
     && chown -R app:app /data /app
 
 ENV ASPNETCORE_URLS=http://+:8080 \
-    ConnectionStrings__DefaultConnection="DataSource=/data/app.db;Cache=Shared"
+    ConnectionStrings__DefaultConnection="Data Source=/app/App_Data/app.db;Cache=Shared"
 
 EXPOSE 8080
 

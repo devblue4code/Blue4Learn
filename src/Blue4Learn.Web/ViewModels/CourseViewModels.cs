@@ -8,6 +8,8 @@ public class SyllabusViewModel
     public Guid CourseId { get; set; }
     public string CourseTitle { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string SyllabusHtml { get; set; } = string.Empty;
+    public string MethodologiesHtml { get; set; } = string.Empty;
     public string? ClassName { get; set; }
     public string? ClassCode { get; set; }
     public List<SyllabusModuleViewModel> Modules { get; set; } = [];

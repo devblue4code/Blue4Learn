@@ -14,26 +14,44 @@ public class CoursesController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly IAccessService _access;
+    private readonly ILearningContextService _context;
+    private readonly IMarkdownService _markdown;
 
-    public CoursesController(ApplicationDbContext db, IAccessService access)
+    public CoursesController(
+        ApplicationDbContext db,
+        IAccessService access,
+        ILearningContextService context,
+        IMarkdownService markdown)
     {
         _db = db;
         _access = access;
+        _context = context;
+        _markdown = markdown;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Syllabus()
+    public async Task<IActionResult> Syllabus(Guid? courseId = null, Guid? classId = null)
     {
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
-        var classGroup = await _access.GetPrimaryClassAsync(user);
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
-        var course = classGroup?.Course
-            ?? await _db.Courses.AsNoTracking()
-                .Where(c => courseIds.Contains(c.Id))
-                .OrderBy(c => c.Title)
-                .FirstOrDefaultAsync();
+        if (classId is Guid cid)
+        {
+            var cls = await _db.ClassGroups.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == cid);
+            if (cls is not null && await _access.CanAccessCourseAsync(user, cls.CourseId))
+            {
+                var canSeeClass = await _access.CanManageClassAsync(user, cls.Id)
+                    || await _db.Enrollments.AnyAsync(e => e.ClassGroupId == cls.Id && e.UserId == user.Id);
+                if (canSeeClass)
+                {
+                    _context.SetCourse(cls.CourseId, cls.Id);
+                }
+            }
+        }
+
+        var course = await _context.ResolveCourseAsync(user, courseId);
+        var classGroup = await _context.ResolveClassAsync(user, classId);
 
         if (course is null)
         {
@@ -67,13 +85,19 @@ public class CoursesController : Controller
             })
             .ToListAsync();
 
+        var syllabusMarkdown = !string.IsNullOrWhiteSpace(course.Syllabus)
+            ? course.Syllabus
+            : course.Description;
+
         return View(new SyllabusViewModel
         {
             CourseId = course.Id,
             CourseTitle = course.Title,
             Description = string.IsNullOrWhiteSpace(course.Description)
-                ? "Estudo e desenvolvimento de aplicações para a Internet utilizando tecnologias web front-end e back-end."
+                ? "Ementa ainda não detalhada para esta disciplina."
                 : course.Description,
+            SyllabusHtml = _markdown.ToSafeHtml(syllabusMarkdown),
+            MethodologiesHtml = _markdown.ToSafeHtml(course.Methodologies),
             ClassName = classGroup?.Name,
             ClassCode = classGroup?.Code,
             Modules = modules
@@ -82,17 +106,13 @@ public class CoursesController : Controller
 
     [Authorize(Roles = $"{AppRoles.Teacher},{AppRoles.Admin}")]
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(Guid? courseId = null)
     {
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
         if (!await _access.CanManageContentAsync(user)) return Forbid();
 
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
-        var course = await _db.Courses.AsNoTracking()
-            .Where(c => courseIds.Contains(c.Id))
-            .OrderBy(c => c.Title)
-            .FirstOrDefaultAsync();
+        var course = await _context.ResolveCourseAsync(user, courseId);
 
         if (course is null)
         {

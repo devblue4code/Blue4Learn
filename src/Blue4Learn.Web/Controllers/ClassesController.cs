@@ -14,15 +14,18 @@ public class ClassesController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly IAccessService _access;
+    private readonly ILearningContextService _context;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public ClassesController(
         ApplicationDbContext db,
         IAccessService access,
+        ILearningContextService context,
         UserManager<ApplicationUser> userManager)
     {
         _db = db;
         _access = access;
+        _context = context;
         _userManager = userManager;
     }
 
@@ -44,7 +47,8 @@ public class ClassesController : Controller
 
         if (!isAdmin)
         {
-            query = query.Where(c => c.Enrollments.Any(e => e.UserId == user.Id));
+            // Professora: só turmas da disciplina atribuída (TeacherUserId).
+            query = query.Where(c => c.Course.TeacherUserId == user.Id);
         }
 
         var classes = await query
@@ -123,10 +127,10 @@ public class ClassesController : Controller
         model.Name = model.Name.Trim();
         model.Courses = await LoadCoursesAsync(user);
 
-        var courseOk = await _db.Courses.AnyAsync(c => c.Id == model.CourseId && c.TenantId == user.TenantId);
+        var courseOk = await _access.CanAccessCourseAsync(user, model.CourseId);
         if (!courseOk)
         {
-            ModelState.AddModelError(nameof(model.CourseId), "Disciplina inválida.");
+            ModelState.AddModelError(nameof(model.CourseId), "Disciplina inválida ou sem permissão.");
         }
 
         var codeTaken = await _db.ClassGroups.AnyAsync(c =>
@@ -191,6 +195,8 @@ public class ClassesController : Controller
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (classGroup is null) return NotFound();
+
+        _context.SetCourse(classGroup.CourseId, classGroup.Id);
 
         var members = new List<ClassMemberViewModel>();
         foreach (var enrollment in classGroup.Enrollments.OrderBy(e => e.User.FullName))
@@ -422,9 +428,10 @@ public class ClassesController : Controller
     {
         if (user.TenantId is null) return [];
 
+        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
         return await _db.Courses
             .AsNoTracking()
-            .Where(c => c.TenantId == user.TenantId)
+            .Where(c => courseIds.Contains(c.Id))
             .OrderBy(c => c.Title)
             .Select(c => new CourseOptionViewModel { Id = c.Id, Title = c.Title })
             .ToListAsync();

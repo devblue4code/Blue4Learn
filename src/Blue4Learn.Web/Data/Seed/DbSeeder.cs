@@ -30,6 +30,8 @@ public static class DbSeeder
         {
             await EnsureDemoQuizAsync(db);
             await EnrichCourseDescriptionAsync(db);
+            await EnsureCourseTeachersAsync(db, userManager);
+            await EnsureDemoLocalAccountsAsync(db, userManager);
             return;
         }
 
@@ -44,7 +46,28 @@ public static class DbSeeder
             Tenant = tenant,
             Title = "Programação Web",
             Slug = "programacao-web",
-            Description = "Estudo e desenvolvimento de aplicações para a Internet utilizando tecnologias web front-end e back-end. A disciplina aborda conceitos fundamentais da arquitetura Cliente-Servidor, protocolos web, marcação, estilização, e programação do lado do cliente (browser) e do servidor. O foco está na criação de sistemas web interativos, responsivos e acessíveis, preparando o aluno para os desafios do mercado de desenvolvimento de software moderno."
+            Description = "Estudo e desenvolvimento de aplicações para a Internet utilizando tecnologias web front-end e back-end. A disciplina aborda conceitos fundamentais da arquitetura Cliente-Servidor, protocolos web, marcação, estilização, e programação do lado do cliente (browser) e do servidor. O foco está na criação de sistemas web interativos, responsivos e acessíveis, preparando o aluno para os desafios do mercado de desenvolvimento de software moderno.",
+            Syllabus = """
+                Estudo dos fundamentos da World Wide Web e do desenvolvimento de páginas e interfaces. Aborda o modelo cliente-servidor, o protocolo HTTP, a estruturação semântica com HTML, a estilização e o layout responsivo com CSS, além da organização do processo de aprendizagem por meio de diário de bordo, dúvidas, práticas e evidências.
+
+                ## Objetivos gerais
+
+                - Compreender como a Web funciona, do navegador ao servidor.
+                - Estruturar páginas com HTML semântico e acessível.
+                - Aplicar CSS com abordagem moderna e responsiva.
+                - Registrar a aprendizagem com diário, atividades e evidências.
+                """,
+            Methodologies = """
+                ## Metodologias
+
+                O componente combina exposição dialogada, estudo ativo do material Markdown, prática guiada e acompanhamento pedagógico por evidências.
+
+                ### Estratégias
+
+                - **Aula-conteúdo:** leitura e exploração do material publicado no Blue4Learn.
+                - **Aprendizagem ativa:** atividades práticas com descrição do problema e da solução.
+                - **Diário de bordo:** registro individual de anotações, dúvidas e conceitos.
+                """
         };
 
         var module = new Module
@@ -98,6 +121,8 @@ public static class DbSeeder
         var student2 = await EnsureUserAsync(userManager, "Marina Estudante", "marina@blue4learn.local", tenant.Id, AppRoles.Student);
         await EnsureUserAsync(userManager, "Admin Blue4", "admin@blue4learn.local", tenant.Id, AppRoles.Admin);
 
+        course.TeacherUserId = teacher.Id;
+
         db.Enrollments.AddRange(
             new Enrollment { ClassGroupId = classGroup.Id, UserId = teacher.Id },
             new Enrollment { ClassGroupId = classGroup.Id, UserId = student.Id },
@@ -105,6 +130,48 @@ public static class DbSeeder
 
         await db.SaveChangesAsync();
         await EnsureDemoQuizAsync(db);
+    }
+
+    private static async Task EnsureCourseTeachersAsync(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    {
+        var unassigned = await db.Courses
+            .Where(c => c.TeacherUserId == null)
+            .ToListAsync();
+        if (unassigned.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var course in unassigned)
+        {
+            // Prefer a teacher already enrolled in a class of this course.
+            var enrolledTeacherId = await (
+                from e in db.Enrollments.AsNoTracking()
+                join cg in db.ClassGroups.AsNoTracking() on e.ClassGroupId equals cg.Id
+                where cg.CourseId == course.Id
+                select e.UserId
+            ).FirstOrDefaultAsync();
+
+            if (enrolledTeacherId is not null)
+            {
+                var enrolledUser = await userManager.FindByIdAsync(enrolledTeacherId);
+                if (enrolledUser is not null && await userManager.IsInRoleAsync(enrolledUser, AppRoles.Teacher))
+                {
+                    course.TeacherUserId = enrolledTeacherId;
+                    continue;
+                }
+            }
+
+            // Fallback: first teacher in the same tenant.
+            var tenantTeachers = await userManager.GetUsersInRoleAsync(AppRoles.Teacher);
+            var tenantTeacher = tenantTeachers.FirstOrDefault(u => u.TenantId == course.TenantId);
+            if (tenantTeacher is not null)
+            {
+                course.TeacherUserId = tenantTeacher.Id;
+            }
+        }
+
+        await db.SaveChangesAsync();
     }
 
     private static async Task EnrichCourseDescriptionAsync(ApplicationDbContext db)
@@ -189,6 +256,51 @@ public static class DbSeeder
                 SubmittedAtUtc = DateTime.UtcNow.AddHours(-5)
             });
             await db.SaveChangesAsync();
+        }
+    }
+
+    private static async Task EnsureDemoLocalAccountsAsync(
+        ApplicationDbContext db,
+        UserManager<ApplicationUser> userManager)
+    {
+        var tenantId = await db.Tenants
+            .AsNoTracking()
+            .OrderBy(t => t.Name)
+            .Select(t => t.Id)
+            .FirstOrDefaultAsync();
+
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        await EnsureUserAsync(userManager, "Admin Blue4", "admin@blue4learn.local", tenantId, AppRoles.Admin);
+        await EnsureUserAsync(userManager, "Ana Professora", "professora@blue4learn.local", tenantId, AppRoles.Teacher);
+        await EnsureUserAsync(userManager, "Lucas Estudante", "aluno@blue4learn.local", tenantId, AppRoles.Student);
+        await EnsureUserAsync(userManager, "Marina Estudante", "marina@blue4learn.local", tenantId, AppRoles.Student);
+
+        // Garante senha demo conhecida nas contas *.blue4learn.local (só se já existirem).
+        foreach (var email in new[]
+                 {
+                     "admin@blue4learn.local",
+                     "professora@blue4learn.local",
+                     "aluno@blue4learn.local",
+                     "marina@blue4learn.local"
+                 })
+        {
+            var user = await userManager.FindByEmailAsync(email);
+            if (user is null) continue;
+
+            user.EmailConfirmed = true;
+            user.LockoutEnd = null;
+            user.AccessFailedCount = 0;
+            await userManager.UpdateAsync(user);
+
+            if (!await userManager.CheckPasswordAsync(user, DemoPassword))
+            {
+                var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                await userManager.ResetPasswordAsync(user, token, DemoPassword);
+            }
         }
     }
 

@@ -5,7 +5,8 @@
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     var action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
-    var isTeacher = User.IsInRole(AppRoles.Teacher) || User.IsInRole(AppRoles.Admin);
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+    var isTeacher = User.IsInRole(AppRoles.Teacher) || isAdmin;
 
     string NavClass(string ctrl, string? act = null)
     {
@@ -88,6 +89,16 @@
             </a>
         }
 
+        @if (isAdmin)
+        {
+            <a class="@NavClass("People")" asp-controller="People" asp-action="Index">
+                <span class="app-nav-icon">
+                    <img src="~/img/icons/icon-users.svg" asp-append-version="true" alt="" width="18" height="18" />
+                </span>
+                <span>Pessoas</span>
+            </a>
+        }
+
         <a class="app-nav-link" asp-area="Identity" asp-page="/Account/Manage/Index">
             <span class="app-nav-icon">
                 <img src="~/img/icons/icon-nav-settings.svg" asp-append-version="true" alt="" width="20" height="20" />
@@ -103,7 +114,7 @@
             ? UserManager.GetUserName(User) ?? "Conta"
             : user!.FullName;
         var initial = char.ToUpperInvariant(displayName.Trim()[0]);
-        var roleLabel = isTeacher ? "Docência" : "Estudante";
+        var roleLabel = isAdmin ? "Administração" : isTeacher ? "Docência" : "Estudante";
 
         <div class="app-side-user">
             <span class="app-side-avatar" aria-hidden="true">@initial</span>

@@ -40,6 +40,7 @@ public class AccessService : IAccessService
 
     public async Task<IReadOnlyList<Guid>> GetAccessibleCourseIdsAsync(ApplicationUser user)
     {
+        // Admin (tenant): todas as disciplinas da instituição.
         if (await _userManager.IsInRoleAsync(user, AppRoles.Admin) && user.TenantId is Guid tenantId)
         {
             return await _db.Courses
@@ -48,6 +49,19 @@ public class AccessService : IAccessService
                 .ToListAsync();
         }
 
+        // Professora: apenas a(s) disciplina(s) atribuída(s) em Course.TeacherUserId (mesmo tenant).
+        if (await _userManager.IsInRoleAsync(user, AppRoles.Teacher))
+        {
+            var query = _db.Courses.AsNoTracking().Where(c => c.TeacherUserId == user.Id);
+            if (user.TenantId is Guid tenantId)
+            {
+                query = query.Where(c => c.TenantId == tenantId);
+            }
+
+            return await query.Select(c => c.Id).ToListAsync();
+        }
+
+        // Estudante: disciplinas das turmas em que está matriculado.
         return await _db.Enrollments
             .AsNoTracking()
             .Where(e => e.UserId == user.Id)
@@ -85,11 +99,24 @@ public class AccessService : IAccessService
             return user.TenantId.HasValue;
         }
 
-        return await _db.Enrollments.AnyAsync(e => e.UserId == user.Id);
+        return await _db.Courses.AnyAsync(c => c.TeacherUserId == user.Id);
     }
 
     public async Task<bool> CanManageClassesAsync(ApplicationUser user)
-        => await IsTeacherOrAdminAsync(user) && user.TenantId.HasValue;
+    {
+        if (user.TenantId is null || !await IsTeacherOrAdminAsync(user))
+        {
+            return false;
+        }
+
+        if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
+        {
+            return true;
+        }
+
+        // Professora só gere turmas se tiver disciplina atribuída.
+        return await _db.Courses.AnyAsync(c => c.TeacherUserId == user.Id);
+    }
 
     public async Task<bool> CanManageClassAsync(ApplicationUser user, Guid classGroupId)
     {
@@ -111,7 +138,9 @@ public class AccessService : IAccessService
             return true;
         }
 
-        return await _db.Enrollments.AnyAsync(e => e.ClassGroupId == classGroupId && e.UserId == user.Id);
+        // Professora: só turmas da disciplina atribuída (matrícula não abre outra disciplina).
+        return await _db.Courses.AsNoTracking()
+            .AnyAsync(c => c.Id == classGroup.CourseId && c.TeacherUserId == user.Id);
     }
 
     public async Task<bool> CanViewStudentAsync(ApplicationUser teacher, string studentUserId)
@@ -145,6 +174,17 @@ public class AccessService : IAccessService
                 .FirstOrDefaultAsync();
         }
 
+        if (await _userManager.IsInRoleAsync(user, AppRoles.Teacher))
+        {
+            return await _db.ClassGroups
+                .AsNoTracking()
+                .Include(c => c.Course)
+                .Include(c => c.Enrollments)
+                .Where(c => c.Course.TeacherUserId == user.Id)
+                .OrderBy(c => c.Name)
+                .FirstOrDefaultAsync();
+        }
+
         return await _db.ClassGroups
             .AsNoTracking()
             .Include(c => c.Course)
@@ -164,6 +204,15 @@ public class AccessService : IAccessService
                 .AsNoTracking()
                 .Where(c => c.TenantId == tenantId)
                 .Select(c => c.Id)
+                .ToListAsync();
+        }
+        else if (await _userManager.IsInRoleAsync(teacher, AppRoles.Teacher))
+        {
+            classIds = await _db.ClassGroups
+                .AsNoTracking()
+                .Where(c => c.Course.TeacherUserId == teacher.Id)
+                .Select(c => c.Id)
+                .Distinct()
                 .ToListAsync();
         }
         else
