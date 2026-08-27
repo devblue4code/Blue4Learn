@@ -18,6 +18,7 @@ public class MarkdownService : IMarkdownService
         _pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
             .UseAutoLinks()
+            .UseAutoIdentifiers()
             .Build();
 
         _sanitizer = new HtmlSanitizer();

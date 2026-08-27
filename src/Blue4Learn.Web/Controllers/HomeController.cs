@@ -85,9 +85,10 @@ public class HomeController : Controller
                 .ToListAsync();
         }
 
+        var classGroupIds = await _access.GetAccessibleClassGroupIdsAsync(user);
         var lessons = await _db.Lessons
             .AsNoTracking()
-            .Where(l => l.Status == ContentStatus.Published && courseIds.Contains(l.Module.CourseId))
+            .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId))
             .OrderBy(l => l.SortOrder)
             .Select(l => new LessonSummaryViewModel
             {

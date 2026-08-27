@@ -186,9 +186,17 @@ public class TeacherDashboardViewModel
     public int SubmittedActivities { get; set; }
     public int AwaitingFeedback { get; set; }
     public int CoveragePercent { get; set; }
+    public IReadOnlyList<TeacherClassOptionViewModel> ClassOptions { get; set; } = [];
     public IReadOnlyList<ConceptStatViewModel> TopConcepts { get; set; } = [];
     public IReadOnlyList<StudentProgressViewModel> Students { get; set; } = [];
     public IReadOnlyList<QuestionFeedItemViewModel> RecentQuestions { get; set; } = [];
+}
+
+public class TeacherClassOptionViewModel
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
 }
 
 public class ConceptStatViewModel

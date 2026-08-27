@@ -10,6 +10,7 @@ public interface IAccessService
     Task<ApplicationUser?> GetCurrentUserAsync(System.Security.Claims.ClaimsPrincipal principal);
     Task<bool> IsTeacherOrAdminAsync(ApplicationUser user);
     Task<IReadOnlyList<Guid>> GetAccessibleCourseIdsAsync(ApplicationUser user);
+    Task<IReadOnlyList<Guid>> GetAccessibleClassGroupIdsAsync(ApplicationUser user);
     Task<bool> CanAccessCourseAsync(ApplicationUser user, Guid courseId);
     Task<bool> CanAccessLessonAsync(ApplicationUser user, Guid lessonId);
     Task<bool> CanManageContentAsync(ApplicationUser user);
@@ -53,9 +54,9 @@ public class AccessService : IAccessService
         if (await _userManager.IsInRoleAsync(user, AppRoles.Teacher))
         {
             var query = _db.Courses.AsNoTracking().Where(c => c.TeacherUserId == user.Id);
-            if (user.TenantId is Guid tenantId)
+            if (user.TenantId is Guid teacherTenantId)
             {
-                query = query.Where(c => c.TenantId == tenantId);
+                query = query.Where(c => c.TenantId == teacherTenantId);
             }
 
             return await query.Select(c => c.Id).ToListAsync();
@@ -70,6 +71,26 @@ public class AccessService : IAccessService
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<Guid>> GetAccessibleClassGroupIdsAsync(ApplicationUser user)
+    {
+        if (await IsTeacherOrAdminAsync(user))
+        {
+            var courseIds = await GetAccessibleCourseIdsAsync(user);
+            return await _db.ClassGroups
+                .AsNoTracking()
+                .Where(c => courseIds.Contains(c.CourseId))
+                .Select(c => c.Id)
+                .ToListAsync();
+        }
+
+        return await _db.Enrollments
+            .AsNoTracking()
+            .Where(e => e.UserId == user.Id)
+            .Select(e => e.ClassGroupId)
+            .Distinct()
+            .ToListAsync();
+    }
+
     public async Task<bool> CanAccessCourseAsync(ApplicationUser user, Guid courseId)
     {
         var courses = await GetAccessibleCourseIdsAsync(user);
@@ -78,13 +99,24 @@ public class AccessService : IAccessService
 
     public async Task<bool> CanAccessLessonAsync(ApplicationUser user, Guid lessonId)
     {
-        var courseId = await _db.Lessons
+        var lesson = await _db.Lessons
             .AsNoTracking()
             .Where(l => l.Id == lessonId)
-            .Select(l => (Guid?)l.Module.CourseId)
+            .Select(l => new { l.ClassGroupId, CourseId = l.Module.CourseId })
             .FirstOrDefaultAsync();
 
-        return courseId is Guid id && await CanAccessCourseAsync(user, id);
+        if (lesson is null)
+        {
+            return false;
+        }
+
+        if (await IsTeacherOrAdminAsync(user))
+        {
+            return await CanAccessCourseAsync(user, lesson.CourseId);
+        }
+
+        return await _db.Enrollments.AnyAsync(e =>
+            e.UserId == user.Id && e.ClassGroupId == lesson.ClassGroupId);
     }
 
     public async Task<bool> CanManageContentAsync(ApplicationUser user)

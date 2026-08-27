@@ -1,0 +1,360 @@
+/* Full-screen lesson reader (GitBook-style) */
+
+.reader-body {
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+}
+
+.reader {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.reader-bar {
+  flex-shrink: 0;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.75rem 0 0.5rem;
+  border-bottom: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  z-index: 30;
+}
+
+.reader-bar-start,
+.reader-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.reader-bar-meta {
+  margin-left: 0.35rem;
+  min-width: 0;
+}
+
+.reader-eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-bar-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader .app-icon-btn.reader-action {
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.reader .app-icon-btn.reader-action:hover,
+.reader .app-icon-btn.reader-action:focus-visible {
+  background: var(--surface-muted);
+  color: var(--text);
+  outline: none;
+}
+
+.reader .app-icon-btn.reader-action.is-active {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.reader .app-icon-btn.reader-action i {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.reader-shell {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 0;
+  position: relative;
+}
+
+.reader.is-toc-collapsed .reader-shell {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.reader.is-focus .reader-shell {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.reader.is-focus .reader-bar-meta,
+.reader.is-focus .reader-article-head,
+.reader.is-focus .reader-lesson-nav,
+.reader.is-focus .reader-toc-foot {
+  display: none;
+}
+
+.reader.is-focus .reader-main {
+  background: var(--surface);
+}
+
+.reader.is-focus .reader-article {
+  max-width: 46rem;
+}
+
+.reader-toc {
+  border-right: 1px solid var(--line-soft);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.reader.is-toc-collapsed .reader-toc,
+.reader.is-focus .reader-toc {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reader-toc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.reader-toc-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.reader-toc-close {
+  display: none;
+}
+
+.reader-toc-nav {
+  flex: 1;
+  overflow: auto;
+  padding: 0.35rem 0.75rem 1.25rem;
+  overscroll-behavior: contain;
+}
+
+.reader-toc-empty {
+  margin: 0.75rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.reader-toc-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  text-decoration: none !important;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  margin-bottom: 0.15rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.reader-toc-item:hover,
+.reader-toc-item:focus-visible {
+  background: var(--surface-muted);
+  color: var(--text);
+  outline: none;
+}
+
+.reader-toc-item.is-active {
+  background: color-mix(in srgb, var(--blue-soft) 70%, transparent);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.reader-toc-item.level-1 {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reader-toc-item.level-2 {
+  padding-left: 1.1rem;
+}
+
+.reader-toc-item.level-3 {
+  padding-left: 1.7rem;
+  font-size: 0.8125rem;
+}
+
+.reader-toc-foot {
+  border-top: 1px solid var(--line-soft);
+  padding: 0.75rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.reader-toc-link {
+  font-size: 0.8125rem;
+  color: var(--blue);
+  text-decoration: none !important;
+}
+
+.reader-toc-link:hover {
+  text-decoration: underline !important;
+}
+
+.reader-toc-backdrop {
+  display: none;
+}
+
+.reader-main {
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.reader-article {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.reader-article-head {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.reader-article-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.5vw, 2.1rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.reader-objective {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.reader-objective span {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-right: 0.4rem;
+}
+
+.reader-lesson-nav {
+  max-width: 44rem;
+  margin: 2.5rem auto 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.reader .markdown-body h1,
+.reader .markdown-body h2,
+.reader .markdown-body h3,
+.reader .markdown-body h4 {
+  scroll-margin-top: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .reader-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reader-toc {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: min(300px, 88vw);
+    z-index: 40;
+    box-shadow: var(--shadow);
+    transform: translateX(-105%);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .reader.is-toc-open .reader-toc {
+    transform: translateX(0);
+  }
+
+  .reader.is-toc-collapsed .reader-toc,
+  .reader.is-focus .reader-toc {
+    transform: translateX(-105%);
+    opacity: 1;
+  }
+
+  .reader-toc-close {
+    display: grid;
+  }
+
+  .reader-toc-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 35;
+    border: 0;
+  }
+
+  .reader.is-toc-open .reader-toc-backdrop {
+    display: block;
+  }
+
+  .reader:not(.is-toc-open) .reader-toc-backdrop,
+  .reader.is-focus .reader-toc-backdrop {
+    display: none;
+  }
+
+  .reader-bar-title {
+    font-size: 0.875rem;
+  }
+
+  .reader-main {
+    padding: 1.15rem 1rem 2.5rem;
+  }
+}
+
+@media (min-width: 901px) {
+  .reader.is-toc-collapsed .reader-toc,
+  .reader.is-focus .reader-toc {
+    width: 0;
+    border: 0;
+  }
+}

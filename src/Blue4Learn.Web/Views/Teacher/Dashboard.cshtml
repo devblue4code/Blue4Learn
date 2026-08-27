@@ -31,6 +31,26 @@ else
         <div class="dash-hero-copy">
             <p class="eyebrow">@greeting, @Model.FirstName</p>
             <h1>@Model.ClassName</h1>
+            @if (Model.ClassOptions.Count > 1)
+            {
+                <form asp-action="SwitchClass" method="post" class="d-flex align-items-center gap-2 mb-2">
+                    @Html.AntiForgeryToken()
+                    <label class="small text-muted mb-0" for="classId">Turma</label>
+                    <select id="classId" name="classId" class="form-select form-select-sm" style="max-width: 280px" onchange="this.form.submit()">
+                        @foreach (var option in Model.ClassOptions)
+                        {
+                            if (Model.ClassId == option.Id)
+                            {
+                                <option value="@option.Id" selected>@option.Name (@option.Code)</option>
+                            }
+                            else
+                            {
+                                <option value="@option.Id">@option.Name (@option.Code)</option>
+                            }
+                        }
+                    </select>
+                </form>
+            }
             <p class="section-lead">
                 @Model.CourseTitle · use os registros para decidir o que retomar, aprofundar ou reorganizar.
             </p>

@@ -1,0 +1,114 @@
+@model LessonWorkspaceViewModel
+@{
+    Layout = "_ReadLayout";
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="reader" data-reader>
+    <header class="reader-bar">
+        <div class="reader-bar-start">
+            <a class="app-icon-btn reader-action"
+               asp-action="Workspace"
+               asp-route-id="@Model.LessonId"
+               title="Voltar à aula"
+               aria-label="Voltar à aula">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            </a>
+            <button type="button"
+                    class="app-icon-btn reader-action"
+                    data-reader-toc-toggle
+                    title="Sumário"
+                    aria-label="Mostrar ou ocultar sumário"
+                    aria-controls="reader-toc"
+                    aria-expanded="true">
+                <i class="bi bi-list-nested" aria-hidden="true"></i>
+            </button>
+            <div class="reader-bar-meta min-w-0">
+                <p class="reader-eyebrow">@Model.CourseTitle · @Model.ModuleTitle</p>
+                <h1 class="reader-bar-title">@Model.Title</h1>
+            </div>
+        </div>
+        <div class="reader-bar-actions">
+            <button type="button"
+                    class="app-icon-btn reader-action"
+                    data-reader-focus
+                    title="Só o conteúdo"
+                    aria-label="Modo foco: só o conteúdo"
+                    aria-pressed="false">
+                <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i>
+            </button>
+            <a class="app-icon-btn reader-action"
+               asp-action="Workspace"
+               asp-route-id="@Model.LessonId"
+               title="Fechar leitura"
+               aria-label="Fechar leitura">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </a>
+        </div>
+    </header>
+
+    <div class="reader-shell">
+        <aside class="reader-toc" id="reader-toc" data-reader-toc aria-label="Sumário">
+            <div class="reader-toc-head">
+                <p class="reader-toc-label">Nesta aula</p>
+                <button type="button"
+                        class="app-icon-btn reader-action reader-toc-close"
+                        data-reader-toc-close
+                        title="Fechar sumário"
+                        aria-label="Fechar sumário">
+                    <i class="bi bi-x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <nav class="reader-toc-nav" data-reader-toc-nav>
+                <p class="reader-toc-empty" data-reader-toc-empty>Sem títulos no conteúdo.</p>
+            </nav>
+            <div class="reader-toc-foot">
+                @if (Model.PreviousLessonId is Guid prev)
+                {
+                    <a class="reader-toc-link" asp-action="Read" asp-route-id="@prev">← Aula anterior</a>
+                }
+                @if (Model.NextLessonId is Guid next)
+                {
+                    <a class="reader-toc-link" asp-action="Read" asp-route-id="@next">Próxima aula →</a>
+                }
+            </div>
+        </aside>
+
+        <div class="reader-toc-backdrop" data-reader-toc-close></div>
+
+        <main class="reader-main" data-reader-main>
+            <article class="reader-article">
+                <header class="reader-article-head">
+                    <p class="reader-eyebrow">@Model.CourseTitle · @Model.ModuleTitle</p>
+                    <h1>@Model.Title</h1>
+                    @if (!string.IsNullOrWhiteSpace(Model.Objective))
+                    {
+                        <p class="reader-objective"><span>Objetivo</span> @Model.Objective</p>
+                    }
+                </header>
+                <div class="markdown-body" data-reader-content>
+                    @Html.Raw(Model.ContentHtml)
+                </div>
+            </article>
+
+            <nav class="reader-lesson-nav" aria-label="Navegação entre aulas">
+                @if (Model.PreviousLessonId is Guid prevLesson)
+                {
+                    <a class="btn btn-outline-primary" asp-action="Read" asp-route-id="@prevLesson">← Aula anterior</a>
+                }
+                else
+                {
+                    <span></span>
+                }
+                @if (Model.NextLessonId is Guid nextLesson)
+                {
+                    <a class="btn btn-outline-primary" asp-action="Read" asp-route-id="@nextLesson">Próxima aula →</a>
+                }
+                else
+                {
+                    <span></span>
+                }
+            </nav>
+        </main>
+    </div>
+</div>

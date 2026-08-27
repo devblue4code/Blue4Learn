@@ -15,17 +15,20 @@ public class ContentController : Controller
     private readonly ApplicationDbContext _db;
     private readonly IMarkdownService _markdown;
     private readonly IAccessService _access;
+    private readonly ILearningContextService _context;
     private readonly IAiTutorService _ai;
 
     public ContentController(
         ApplicationDbContext db,
         IMarkdownService markdown,
         IAccessService access,
+        ILearningContextService context,
         IAiTutorService ai)
     {
         _db = db;
         _markdown = markdown;
         _access = access;
+        _context = context;
         _ai = ai;
     }
 
@@ -35,15 +38,20 @@ public class ContentController : Controller
         if (user is null) return Challenge();
         if (!await _access.CanManageContentAsync(user)) return Forbid();
 
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
-        var course = await _db.Courses.AsNoTracking()
-            .Where(c => courseIds.Contains(c.Id))
-            .OrderBy(c => c.Title)
-            .FirstOrDefaultAsync();
+        var classGroup = await _context.ResolveClassAsync(user);
+        if (classGroup is null)
+        {
+            return View(new ContentLibraryViewModel
+            {
+                CourseTitle = "Disciplina",
+                ClassName = "Turma",
+                Lessons = []
+            });
+        }
 
         var lessons = await _db.Lessons
             .AsNoTracking()
-            .Where(l => courseIds.Contains(l.Module.CourseId))
+            .Where(l => l.ClassGroupId == classGroup.Id)
             .OrderBy(l => l.Module.SortOrder)
             .ThenBy(l => l.SortOrder)
             .Select(l => new ContentLessonItemViewModel
@@ -67,7 +75,8 @@ public class ContentController : Controller
 
         return View(new ContentLibraryViewModel
         {
-            CourseTitle = course?.Title ?? "Disciplina",
+            CourseTitle = classGroup.Course.Title,
+            ClassName = classGroup.Name,
             Lessons = lessons
         });
     }
@@ -157,13 +166,22 @@ public class ContentController : Controller
             model.Slug = SlugHelper.FromTitle(model.Slug);
         }
 
+        var classGroup = await _context.ResolveClassAsync(user);
+        if (classGroup is null)
+        {
+            ModelState.AddModelError(string.Empty, "Selecione uma turma antes de salvar o conteúdo.");
+        }
+
         var moduleCourseId = await _db.Modules
             .Where(m => m.Id == model.ModuleId)
             .Select(m => (Guid?)m.CourseId)
             .FirstOrDefaultAsync();
-        if (moduleCourseId is null || !await _access.CanAccessCourseAsync(user, moduleCourseId.Value))
+        if (moduleCourseId is null ||
+            classGroup is null ||
+            moduleCourseId.Value != classGroup.CourseId ||
+            !await _access.CanAccessCourseAsync(user, moduleCourseId.Value))
         {
-            ModelState.AddModelError(nameof(model.ModuleId), "Módulo inválido.");
+            ModelState.AddModelError(nameof(model.ModuleId), "Módulo inválido para a turma selecionada.");
         }
 
         if (model.Id is Guid existingId && !await _access.CanAccessLessonAsync(user, existingId))
@@ -171,14 +189,18 @@ public class ContentController : Controller
             return Forbid();
         }
 
-        var slugTaken = await _db.Lessons.AnyAsync(l =>
-            l.ModuleId == model.ModuleId &&
-            l.Slug == model.Slug &&
-            (!model.Id.HasValue || l.Id != model.Id.Value));
-
-        if (slugTaken)
+        if (classGroup is not null)
         {
-            ModelState.AddModelError(nameof(model.Slug), "Já existe uma aula com este slug neste módulo.");
+            var slugTaken = await _db.Lessons.AnyAsync(l =>
+                l.ClassGroupId == classGroup.Id &&
+                l.ModuleId == model.ModuleId &&
+                l.Slug == model.Slug &&
+                (!model.Id.HasValue || l.Id != model.Id.Value));
+
+            if (slugTaken)
+            {
+                ModelState.AddModelError(nameof(model.Slug), "Já existe uma aula com este slug neste módulo nesta turma.");
+            }
         }
 
         if (!ModelState.IsValid)
@@ -196,10 +218,15 @@ public class ContentController : Controller
                 .Include(l => l.Activities)
                 .FirstOrDefaultAsync(l => l.Id == id)
                 ?? throw new InvalidOperationException("Aula não encontrada.");
+
+            if (lesson.ClassGroupId != classGroup!.Id)
+            {
+                return Forbid();
+            }
         }
         else
         {
-            lesson = new Lesson();
+            lesson = new Lesson { ClassGroupId = classGroup!.Id };
             _db.Lessons.Add(lesson);
         }
 
@@ -328,10 +355,12 @@ public class ContentController : Controller
 
     private async Task<IReadOnlyList<ModuleOptionViewModel>> LoadModulesAsync(ApplicationUser user)
     {
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var course = await _context.ResolveCourseAsync(user);
+        if (course is null) return [];
+
         return await _db.Modules
             .AsNoTracking()
-            .Where(m => courseIds.Contains(m.CourseId))
+            .Where(m => m.CourseId == course.Id)
             .OrderBy(m => m.SortOrder)
             .Select(m => new ModuleOptionViewModel { Id = m.Id, Title = m.Title })
             .ToListAsync();
@@ -364,7 +393,7 @@ public class ContentController : Controller
         }
     }
 
-    private static void SyncConcepts(Lesson lesson, string? conceptsText)
+    private void SyncConcepts(Lesson lesson, string? conceptsText)
     {
         var names = (conceptsText ?? string.Empty)
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -377,12 +406,10 @@ public class ContentController : Controller
             .Where(c => !names.Any(n => string.Equals(n, c.Name, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        foreach (var concept in toRemove)
+        if (toRemove.Count > 0)
         {
-            lesson.Concepts.Remove(concept);
+            _db.Concepts.RemoveRange(toRemove);
         }
-
-        // Marks are cascade-deleted with Concept (see ApplicationDbContext).
 
         foreach (var name in names)
         {

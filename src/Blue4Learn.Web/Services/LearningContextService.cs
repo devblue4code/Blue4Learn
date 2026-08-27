@@ -127,12 +127,43 @@ public class LearningContextService : ILearningContextService
 
     public async Task<ClassGroup?> ResolveClassAsync(ApplicationUser user, Guid? preferredClassId = null)
     {
+        var accessible = await _access.GetAccessibleCourseIdsAsync(user);
+        if (accessible.Count == 0) return null;
+        var tenantOk = user.TenantId;
+
+        async Task<ClassGroup?> LoadAnyAccessible(Guid id) =>
+            await _db.ClassGroups.AsNoTracking()
+                .Include(c => c.Course)
+                .Include(c => c.Enrollments)
+                .FirstOrDefaultAsync(c =>
+                    c.Id == id
+                    && accessible.Contains(c.CourseId)
+                    && (tenantOk == null || c.TenantId == tenantOk));
+
+        if (preferredClassId is Guid preferred)
+        {
+            var cls = await LoadAnyAccessible(preferred);
+            if (cls is not null)
+            {
+                SetCourse(cls.CourseId, cls.Id);
+                return cls;
+            }
+        }
+
+        if (SelectedClassId is Guid selected)
+        {
+            var cls = await LoadAnyAccessible(selected);
+            if (cls is not null)
+            {
+                SetCourse(cls.CourseId, cls.Id);
+                return cls;
+            }
+        }
+
         var course = await ResolveCourseAsync(user);
         if (course is null) return null;
 
-        var tenantOk = user.TenantId;
-
-        async Task<ClassGroup?> Load(Guid id) =>
+        async Task<ClassGroup?> LoadFromCourse(Guid id) =>
             await _db.ClassGroups.AsNoTracking()
                 .Include(c => c.Course)
                 .Include(c => c.Enrollments)
@@ -141,20 +172,13 @@ public class LearningContextService : ILearningContextService
                     && c.CourseId == course.Id
                     && (tenantOk == null || c.TenantId == tenantOk));
 
-        if (preferredClassId is Guid preferred)
+        if (SelectedClassId is Guid selectedInCourse)
         {
-            var cls = await Load(preferred);
+            var cls = await LoadFromCourse(selectedInCourse);
             if (cls is not null)
             {
-                SetCourse(course.Id, cls.Id);
                 return cls;
             }
-        }
-
-        if (SelectedClassId is Guid selected)
-        {
-            var cls = await Load(selected);
-            if (cls is not null) return cls;
         }
 
         var first = await _db.ClassGroups.AsNoTracking()

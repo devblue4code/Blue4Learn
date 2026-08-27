@@ -77,30 +77,6 @@ public static class DbSeeder
             SortOrder = 1
         };
 
-        var lesson1 = CreateLesson(module, 1, "introducao-http", "Introdução à Web e HTTP",
-            "Compreender o modelo cliente-servidor e o papel do HTTP.",
-            Lesson1Markdown(),
-            ["Cliente-servidor", "HTTP", "URL", "Navegador"],
-            "Monte um mapa mental (texto) explicando o caminho de uma requisição HTTP.");
-
-        var lesson2 = CreateLesson(module, 2, "html-semantico", "HTML Semântico",
-            "Estruturar páginas com tags semânticas e acessíveis.",
-            Lesson2Markdown(),
-            ["HTML", "Semântica", "Acessibilidade", "DOM"],
-            "Crie uma página HTML semântica com header, main, article e footer. Publique o link do repositório.");
-
-        var lesson3 = CreateLesson(module, 3, "css-layout", "CSS e Layout Responsivo",
-            "Organizar layout com Flexbox e pensar mobile-first.",
-            Lesson3Markdown(),
-            ["CSS", "Flexbox", "Mobile-first", "Responsividade"],
-            "Adapte a página anterior para mobile usando Flexbox. Descreva o problema e a solução.");
-
-        var lesson4 = CreateLesson(module, 4, "diario-de-bordo", "Diário de Bordo na Prática",
-            "Registrar dúvidas, evidências e reflexão como parte da aprendizagem.",
-            Lesson4Markdown(),
-            ["Metacognição", "Evidência", "Reflexão", "Feedback"],
-            "Complete o diário desta aula e envie uma evidência do que você compreendeu.");
-
         var classGroup = new ClassGroup
         {
             Tenant = tenant,
@@ -109,11 +85,35 @@ public static class DbSeeder
             Code = "PW261"
         };
 
+        var lesson1 = CreateLesson(module, classGroup, 1, "introducao-http", "Introdução à Web e HTTP",
+            "Compreender o modelo cliente-servidor e o papel do HTTP.",
+            Lesson1Markdown(),
+            ["Cliente-servidor", "HTTP", "URL", "Navegador"],
+            "Monte um mapa mental (texto) explicando o caminho de uma requisição HTTP.");
+
+        var lesson2 = CreateLesson(module, classGroup, 2, "html-semantico", "HTML Semântico",
+            "Estruturar páginas com tags semânticas e acessíveis.",
+            Lesson2Markdown(),
+            ["HTML", "Semântica", "Acessibilidade", "DOM"],
+            "Crie uma página HTML semântica com header, main, article e footer. Publique o link do repositório.");
+
+        var lesson3 = CreateLesson(module, classGroup, 3, "css-layout", "CSS e Layout Responsivo",
+            "Organizar layout com Flexbox e pensar mobile-first.",
+            Lesson3Markdown(),
+            ["CSS", "Flexbox", "Mobile-first", "Responsividade"],
+            "Adapte a página anterior para mobile usando Flexbox. Descreva o problema e a solução.");
+
+        var lesson4 = CreateLesson(module, classGroup, 4, "diario-de-bordo", "Diário de Bordo na Prática",
+            "Registrar dúvidas, evidências e reflexão como parte da aprendizagem.",
+            Lesson4Markdown(),
+            ["Metacognição", "Evidência", "Reflexão", "Feedback"],
+            "Complete o diário desta aula e envie uma evidência do que você compreendeu.");
+
         db.Tenants.Add(tenant);
         db.Courses.Add(course);
         db.Modules.Add(module);
-        db.Lessons.AddRange(lesson1, lesson2, lesson3, lesson4);
         db.ClassGroups.Add(classGroup);
+        db.Lessons.AddRange(lesson1, lesson2, lesson3, lesson4);
         await db.SaveChangesAsync();
 
         var teacher = await EnsureUserAsync(userManager, "Ana Professora", "professora@blue4learn.local", tenant.Id, AppRoles.Teacher);
@@ -340,6 +340,7 @@ public static class DbSeeder
 
     private static Lesson CreateLesson(
         Module module,
+        ClassGroup classGroup,
         int order,
         string slug,
         string title,
@@ -351,6 +352,7 @@ public static class DbSeeder
         var lesson = new Lesson
         {
             Module = module,
+            ClassGroup = classGroup,
             Title = title,
             Slug = slug,
             Objective = objective,

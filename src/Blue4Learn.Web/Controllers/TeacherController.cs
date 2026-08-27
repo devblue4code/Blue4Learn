@@ -15,6 +15,7 @@ public class TeacherController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly IAccessService _access;
+    private readonly ILearningContextService _context;
     private readonly IMarkdownService _markdown;
     private readonly IAiTutorService _ai;
     private readonly IGitHubCommitService _github;
@@ -22,12 +23,14 @@ public class TeacherController : Controller
     public TeacherController(
         ApplicationDbContext db,
         IAccessService access,
+        ILearningContextService context,
         IMarkdownService markdown,
         IAiTutorService ai,
         IGitHubCommitService github)
     {
         _db = db;
         _access = access;
+        _context = context;
         _markdown = markdown;
         _ai = ai;
         _github = github;
@@ -38,23 +41,39 @@ public class TeacherController : Controller
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
+        var classOptions = await LoadClassOptionsAsync(user);
+
         var firstName = string.IsNullOrWhiteSpace(user.FullName)
             ? (user.Email?.Split('@').FirstOrDefault() ?? "Professora")
             : user.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? user.FullName;
 
-        var classGroup = await _access.GetPrimaryClassAsync(user);
+        var classGroup = await _context.ResolveClassAsync(user);
         if (classGroup is null)
         {
             return View(new TeacherDashboardViewModel
             {
                 FirstName = firstName,
-                HasClass = false
+                HasClass = false,
+                ClassOptions = classOptions
             });
         }
 
-        var studentIds = await _access.GetStudentIdsInSharedClassesAsync(user);
+        var classMemberIds = await _db.Enrollments
+            .AsNoTracking()
+            .Where(e => e.ClassGroupId == classGroup.Id)
+            .Select(e => e.UserId)
+            .Distinct()
+            .ToListAsync();
+        var classMemberSet = classMemberIds.ToHashSet();
+
+        // Scope the dashboard to the selected class only, avoiding cross-class data leakage.
+        var sharedStudentIds = await _access.GetStudentIdsInSharedClassesAsync(user);
+        var studentIds = sharedStudentIds
+            .Where(classMemberSet.Contains)
+            .Distinct()
+            .ToList();
         var studentIdSet = studentIds.ToHashSet();
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var selectedCourseId = classGroup.CourseId;
 
         var students = await _db.Users
             .AsNoTracking()
@@ -63,7 +82,7 @@ public class TeacherController : Controller
             .ToListAsync();
 
         var publishedLessons = await _db.Lessons
-            .CountAsync(l => l.Status == ContentStatus.Published && courseIds.Contains(l.Module.CourseId));
+            .CountAsync(l => l.Status == ContentStatus.Published && l.Module.CourseId == selectedCourseId);
 
         var journals = await _db.StudentJournalEntries
             .AsNoTracking()
@@ -71,7 +90,7 @@ public class TeacherController : Controller
             .Include(j => j.ConceptMarks).ThenInclude(m => m.Concept)
             .Include(j => j.Lesson).ThenInclude(l => l.Module)
             .Include(j => j.User)
-            .Where(j => studentIdSet.Contains(j.UserId) && courseIds.Contains(j.Lesson.Module.CourseId))
+            .Where(j => studentIdSet.Contains(j.UserId) && j.Lesson.Module.CourseId == selectedCourseId)
             .ToListAsync();
 
         var submissions = await _db.ActivitySubmissions
@@ -79,7 +98,7 @@ public class TeacherController : Controller
             .Include(s => s.Activity).ThenInclude(a => a.Lesson).ThenInclude(l => l.Module)
             .Where(s => studentIdSet.Contains(s.UserId)
                         && s.Status >= ActivityStatus.Submitted
-                        && courseIds.Contains(s.Activity.Lesson.Module.CourseId))
+                        && s.Activity.Lesson.Module.CourseId == selectedCourseId)
             .ToListAsync();
 
         var openQuestions = journals.SelectMany(j => j.Questions).Where(q => q.Status == QuestionStatus.Open).ToList();
@@ -179,6 +198,7 @@ public class TeacherController : Controller
             SubmittedActivities = submissions.Count,
             AwaitingFeedback = awaitingFeedback,
             CoveragePercent = coveragePercent,
+            ClassOptions = classOptions,
             TopConcepts = topConcepts,
             Students = studentProgress,
             RecentQuestions = recentQuestions
@@ -190,9 +210,29 @@ public class TeacherController : Controller
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
-        var classGroup = await _access.GetPrimaryClassAsync(user);
-        var studentIds = await _access.GetStudentIdsInSharedClassesAsync(user);
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var classGroup = await _context.ResolveClassAsync(user);
+        if (classGroup is null)
+        {
+            return View(new ClassJournalsViewModel
+            {
+                ClassName = "Turma",
+                CourseTitle = "Disciplina",
+                Entries = []
+            });
+        }
+
+        var classMemberIds = await _db.Enrollments
+            .AsNoTracking()
+            .Where(e => e.ClassGroupId == classGroup.Id)
+            .Select(e => e.UserId)
+            .Distinct()
+            .ToListAsync();
+        var classMemberSet = classMemberIds.ToHashSet();
+        var studentIds = (await _access.GetStudentIdsInSharedClassesAsync(user))
+            .Where(classMemberSet.Contains)
+            .Distinct()
+            .ToList();
+        var selectedCourseId = classGroup.CourseId;
 
         filter = (filter ?? "all").ToLowerInvariant();
 
@@ -201,7 +241,7 @@ public class TeacherController : Controller
             .Include(j => j.User)
             .Include(j => j.Questions)
             .Include(j => j.Lesson).ThenInclude(l => l.Module)
-            .Where(j => studentIds.Contains(j.UserId) && courseIds.Contains(j.Lesson.Module.CourseId))
+            .Where(j => studentIds.Contains(j.UserId) && j.Lesson.Module.CourseId == selectedCourseId)
             .OrderByDescending(j => j.NeedsReview)
             .ThenByDescending(j => j.UpdatedAtUtc)
             .ToListAsync();
@@ -241,9 +281,28 @@ public class TeacherController : Controller
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
-        var classGroup = await _access.GetPrimaryClassAsync(user);
-        var studentIds = await _access.GetStudentIdsInSharedClassesAsync(user);
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var classGroup = await _context.ResolveClassAsync(user);
+        if (classGroup is null)
+        {
+            return View(new SubmissionListViewModel
+            {
+                ClassName = "Turma",
+                Items = []
+            });
+        }
+
+        var classMemberIds = await _db.Enrollments
+            .AsNoTracking()
+            .Where(e => e.ClassGroupId == classGroup.Id)
+            .Select(e => e.UserId)
+            .Distinct()
+            .ToListAsync();
+        var classMemberSet = classMemberIds.ToHashSet();
+        var studentIds = (await _access.GetStudentIdsInSharedClassesAsync(user))
+            .Where(classMemberSet.Contains)
+            .Distinct()
+            .ToList();
+        var selectedCourseId = classGroup.CourseId;
 
         var items = await _db.ActivitySubmissions
             .AsNoTracking()
@@ -252,7 +311,7 @@ public class TeacherController : Controller
             .Include(s => s.Activity).ThenInclude(a => a.Lesson).ThenInclude(l => l.Module)
             .Where(s => studentIds.Contains(s.UserId)
                         && s.Status >= ActivityStatus.Submitted
-                        && courseIds.Contains(s.Activity.Lesson.Module.CourseId))
+                        && s.Activity.Lesson.Module.CourseId == selectedCourseId)
             .OrderByDescending(s => s.UpdatedAtUtc)
             .Select(s => new SubmissionListItemViewModel
             {
@@ -272,6 +331,23 @@ public class TeacherController : Controller
             ClassName = classGroup?.Name ?? "Turma",
             Items = items
         });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SwitchClass(Guid classId)
+    {
+        var user = await _access.GetCurrentUserAsync(User);
+        if (user is null) return Challenge();
+
+        var selected = await _context.ResolveClassAsync(user, classId);
+        if (selected is null)
+        {
+            return Forbid();
+        }
+
+        TempData["Success"] = $"Turma selecionada: {selected.Name}.";
+        return RedirectToAction(nameof(Dashboard));
     }
 
     [HttpGet]
@@ -515,4 +591,32 @@ public class TeacherController : Controller
                 SizeBytes = a.SizeBytes
             }).ToList()
     };
+
+    private async Task<IReadOnlyList<TeacherClassOptionViewModel>> LoadClassOptionsAsync(ApplicationUser user)
+    {
+        if (user.TenantId is null)
+        {
+            return [];
+        }
+
+        var isAdmin = User.IsInRole(AppRoles.Admin);
+        var query = _db.ClassGroups
+            .AsNoTracking()
+            .Where(c => c.TenantId == user.TenantId.Value);
+
+        if (!isAdmin)
+        {
+            query = query.Where(c => c.Course.TeacherUserId == user.Id);
+        }
+
+        return await query
+            .OrderBy(c => c.Name)
+            .Select(c => new TeacherClassOptionViewModel
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Code = c.Code
+            })
+            .ToListAsync();
+    }
 }

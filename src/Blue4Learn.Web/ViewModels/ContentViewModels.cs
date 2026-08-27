@@ -6,6 +6,7 @@ namespace Blue4Learn.Web.ViewModels;
 public class ContentLibraryViewModel
 {
     public string CourseTitle { get; set; } = string.Empty;
+    public string ClassName { get; set; } = string.Empty;
     public IReadOnlyList<ContentLessonItemViewModel> Lessons { get; set; } = [];
 }
 

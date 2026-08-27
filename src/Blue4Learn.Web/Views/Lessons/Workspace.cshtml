@@ -12,8 +12,17 @@
         <partial name="_WorkspaceNav" model="Model" />
         <section class="content-pane soft-panel ws-panel">
             <div class="ws-panel-head">
-                <h2>Conteúdo da aula</h2>
-                <p>Leia com calma. No fim, siga o próximo passo do seu processo.</p>
+                <div>
+                    <h2>Conteúdo da aula</h2>
+                    <p>Leia com calma. No fim, siga o próximo passo do seu processo.</p>
+                </div>
+                <a class="app-icon-btn reader-open-btn"
+                   asp-action="Read"
+                   asp-route-id="@Model.LessonId"
+                   title="Modo leitura"
+                   aria-label="Abrir modo leitura em tela cheia">
+                    <i class="bi bi-book" aria-hidden="true"></i>
+                </a>
             </div>
             <div class="markdown-body">
                 @Html.Raw(Model.ContentHtml)

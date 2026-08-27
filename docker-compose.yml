@@ -9,6 +9,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: DataSource=/data/app.db;Cache=Shared
+      GitHub__Token: ${GitHub__Token:-}
     volumes:
       - blue4learn-data:/data
       - blue4learn-uploads:/app/App_Data

@@ -1,6 +1,7 @@
 ﻿using Blue4Learn.Web.Domain;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Blue4Learn.Web.Data;
 
@@ -33,6 +34,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
+        // Existing SQLite rows store Guids as uppercase TEXT; comparisons are case-sensitive.
+        var guidToUpperString = new ValueConverter<Guid, string>(
+            g => g.ToString("D").ToUpperInvariant(),
+            s => Guid.Parse(s));
+        var nullableGuidToUpperString = new ValueConverter<Guid?, string?>(
+            g => g.HasValue ? g.Value.ToString("D").ToUpperInvariant() : null,
+            s => string.IsNullOrWhiteSpace(s) ? null : Guid.Parse(s));
+
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(Guid))
+                {
+                    property.SetValueConverter(guidToUpperString);
+                }
+                else if (property.ClrType == typeof(Guid?))
+                {
+                    property.SetValueConverter(nullableGuidToUpperString);
+                }
+            }
+        }
+
         builder.Entity<Tenant>(e =>
         {
             e.HasIndex(x => x.Slug).IsUnique();
@@ -55,9 +79,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Lesson>(e =>
         {
-            e.HasIndex(x => new { x.ModuleId, x.Slug }).IsUnique();
+            e.HasIndex(x => x.ModuleId);
+            e.HasIndex(x => new { x.ClassGroupId, x.ModuleId, x.Slug }).IsUnique();
+            e.HasIndex(x => new { x.ClassGroupId, x.SortOrder });
             e.Property(x => x.Title).HasMaxLength(200);
             e.Property(x => x.Slug).HasMaxLength(100);
+            e.HasOne(x => x.ClassGroup)
+                .WithMany()
+                .HasForeignKey(x => x.ClassGroupId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<ContentDocument>(e =>

@@ -37,12 +37,12 @@ public class LessonsController : Controller
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var classGroupIds = await _access.GetAccessibleClassGroupIdsAsync(user);
         var lessons = await _db.Lessons
             .AsNoTracking()
             .Include(l => l.Module)
             .Include(l => l.JournalEntries)
-            .Where(l => l.Status == ContentStatus.Published && courseIds.Contains(l.Module.CourseId))
+            .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId))
             .OrderBy(l => l.SortOrder)
             .Select(l => new LessonSummaryViewModel
             {
@@ -61,6 +61,9 @@ public class LessonsController : Controller
     public Task<IActionResult> Workspace(Guid id) =>
         LessonPageAsync(id, "content", "Workspace");
 
+    public Task<IActionResult> Read(Guid id) =>
+        LessonPageAsync(id, "content", "Read");
+
     public Task<IActionResult> Journal(Guid id) =>
         LessonPageAsync(id, "journal", "Journal");
 
@@ -75,6 +78,7 @@ public class LessonsController : Controller
         var (error, vm) = await TryLoadWorkspaceAsync(id);
         if (error is not null) return error;
         ViewData["WorkspaceSection"] = section;
+        ViewData["LessonId"] = id;
         return View(viewName, vm);
     }
 
@@ -105,6 +109,7 @@ public class LessonsController : Controller
             .AsNoTracking()
             .Where(l =>
                 l.ModuleId == lesson.ModuleId &&
+                l.ClassGroupId == lesson.ClassGroupId &&
                 (l.Status == ContentStatus.Published || canPreviewDrafts && l.Status != ContentStatus.Archived))
             .OrderBy(l => l.SortOrder)
             .Select(l => new { l.Id, l.SortOrder })
@@ -336,20 +341,55 @@ public class LessonsController : Controller
         journal.NeedsReview = model.NeedsReview;
         journal.UpdatedAtUtc = DateTime.UtcNow;
 
-        _db.ConceptMarks.RemoveRange(journal.ConceptMarks);
-        journal.ConceptMarks.Clear();
-
         var validConceptIds = await _db.Concepts
             .Where(c => c.LessonId == model.LessonId)
             .Select(c => c.Id)
             .ToListAsync();
 
-        foreach (var conceptId in model.MarkedConceptIds.Distinct().Where(validConceptIds.Contains))
+        var selectedConceptIds = model.MarkedConceptIds
+            .Distinct()
+            .Where(validConceptIds.Contains)
+            .ToHashSet();
+        var understoodConceptIds = model.UnderstoodConceptIds
+            .Distinct()
+            .Where(selectedConceptIds.Contains)
+            .ToHashSet();
+
+        // Avoid mutating the navigation collection (Remove/Add/Clear): relationship fixup can
+        // dirty ConceptId/JournalEntryId and break SQLite Guid TEXT updates.
+        var currentMarks = journal.ConceptMarks.ToList();
+        foreach (var mark in currentMarks)
         {
-            journal.ConceptMarks.Add(new ConceptMark
+            if (!selectedConceptIds.Contains(mark.ConceptId))
             {
+                _db.ConceptMarks.Remove(mark);
+                continue;
+            }
+
+            var nextUnderstood = understoodConceptIds.Contains(mark.ConceptId);
+            if (mark.Understood != nextUnderstood)
+            {
+                mark.Understood = nextUnderstood;
+            }
+        }
+
+        var keptConceptIds = currentMarks
+            .Where(m => selectedConceptIds.Contains(m.ConceptId))
+            .Select(m => m.ConceptId)
+            .ToHashSet();
+
+        foreach (var conceptId in selectedConceptIds)
+        {
+            if (keptConceptIds.Contains(conceptId))
+            {
+                continue;
+            }
+
+            _db.ConceptMarks.Add(new ConceptMark
+            {
+                JournalEntryId = journal.Id,
                 ConceptId = conceptId,
-                Understood = model.UnderstoodConceptIds.Contains(conceptId)
+                Understood = understoodConceptIds.Contains(conceptId)
             });
         }
 

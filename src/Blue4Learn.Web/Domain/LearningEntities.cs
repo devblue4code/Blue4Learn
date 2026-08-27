@@ -43,6 +43,8 @@ public class Module
 public class Lesson
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ClassGroupId { get; set; }
+    public ClassGroup ClassGroup { get; set; } = null!;
     public Guid ModuleId { get; set; }
     public Module Module { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
@@ -50,6 +52,7 @@ public class Lesson
     public string Objective { get; set; } = string.Empty;
     public int SortOrder { get; set; }
     public ContentStatus Status { get; set; } = ContentStatus.Draft;
+    public DateTime? LessonDate { get; set; }
     public ContentDocument? ContentDocument { get; set; }
     public ICollection<Concept> Concepts { get; set; } = [];
     public ICollection<Activity> Activities { get; set; } = [];

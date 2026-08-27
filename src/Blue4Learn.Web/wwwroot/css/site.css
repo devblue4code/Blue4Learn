@@ -1711,6 +1711,10 @@ body.is-landing .site-footer {
 
 .ws-panel-head {
   margin-bottom: 1.1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .ws-panel-head h2 {
@@ -1723,6 +1727,25 @@ body.is-landing .site-footer {
   margin: 0;
   color: var(--muted);
   font-size: .9rem;
+}
+
+a.app-icon-btn.reader-open-btn {
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+a.app-icon-btn.reader-open-btn:hover,
+a.app-icon-btn.reader-open-btn:focus-visible {
+  background: var(--surface-muted);
+  color: var(--blue);
+  outline: none;
+}
+
+a.app-icon-btn.reader-open-btn i {
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 .ws-step {
@@ -2107,6 +2130,7 @@ code.copyable-code {
   border-collapse: collapse;
   border: 1px solid var(--line);
   background: var(--surface);
+  color: var(--text);
   overflow-x: auto;
 }
 
@@ -2116,16 +2140,36 @@ code.copyable-code {
   padding: .55rem .75rem;
   text-align: left;
   vertical-align: top;
+  color: var(--text);
+  background: var(--surface);
 }
 
 .markdown-body th {
-  background: color-mix(in srgb, var(--muted) 12%, var(--surface));
+  background: color-mix(in srgb, var(--muted) 14%, var(--surface));
   color: var(--blue-deep);
   font-weight: 700;
 }
 
 .markdown-body tr:nth-child(even) td {
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--muted) 8%, var(--surface));
+}
+
+.markdown-body tr:hover td {
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
+}
+
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5rem 0;
+}
+
+.markdown-body a {
+  color: var(--blue);
+}
+
+.markdown-body a:hover {
+  color: var(--blue-active);
 }
 
 .lesson-nav {

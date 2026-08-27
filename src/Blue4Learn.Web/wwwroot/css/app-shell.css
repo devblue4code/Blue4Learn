@@ -341,13 +341,40 @@ html[data-theme="dark"] .app-side-logout img {
   place-items: center;
   color: var(--muted);
   text-decoration: none !important;
-  cursor: default;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+a.app-icon-btn:hover,
+a.app-icon-btn:focus-visible,
+button.app-icon-btn:hover,
+button.app-icon-btn:focus-visible {
+  background: var(--surface-muted);
+  color: var(--blue);
+  outline: none;
+}
+
+.app-icon-btn i {
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 .app-icon-btn img {
   width: 1.125rem;
   height: 1.125rem;
   display: block;
+}
+
+html[data-theme="dark"] .app-icon-btn img {
+  filter: brightness(0) invert(1);
+  opacity: 0.78;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app-icon-btn img {
+    filter: brightness(0) invert(1);
+    opacity: 0.78;
+  }
 }
 
 .app-top-avatar {
