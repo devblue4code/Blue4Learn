@@ -140,6 +140,7 @@ public class ContentController : Controller
             Markdown = lesson.ContentDocument?.Markdown ?? string.Empty,
             ConceptsText = string.Join(Environment.NewLine, lesson.Concepts.Select(c => c.Name)),
             ActivityPrompt = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.Prompt,
+            RequiresGitHubDelivery = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.RequiresGitHubDelivery ?? false,
             PreviewHtml = _markdown.ToSafeHtml(lesson.ContentDocument?.Markdown)
         });
 
@@ -247,7 +248,7 @@ public class ContentController : Controller
         lesson.ContentDocument.UpdatedAtUtc = DateTime.UtcNow;
 
         SyncConcepts(lesson, model.ConceptsText);
-        SyncActivity(lesson, model.ActivityPrompt);
+        SyncActivity(lesson, model.ActivityPrompt, model.RequiresGitHubDelivery);
 
         await _db.SaveChangesAsync();
 
@@ -425,11 +426,16 @@ public class ContentController : Controller
         }
     }
 
-    private static void SyncActivity(Lesson lesson, string? prompt)
+    private static void SyncActivity(Lesson lesson, string? prompt, bool requiresGitHubDelivery)
     {
         var activity = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault();
         if (string.IsNullOrWhiteSpace(prompt))
         {
+            if (activity is not null)
+            {
+                activity.RequiresGitHubDelivery = requiresGitHubDelivery;
+            }
+
             return;
         }
 
@@ -439,12 +445,14 @@ public class ContentController : Controller
             {
                 Title = $"Atividade — {lesson.Title}",
                 Prompt = prompt.Trim(),
-                DueAtUtc = DateTime.UtcNow.AddDays(7)
+                DueAtUtc = DateTime.UtcNow.AddDays(7),
+                RequiresGitHubDelivery = requiresGitHubDelivery
             });
             return;
         }
 
         activity.Title = $"Atividade — {lesson.Title}";
         activity.Prompt = prompt.Trim();
+        activity.RequiresGitHubDelivery = requiresGitHubDelivery;
     }
 }

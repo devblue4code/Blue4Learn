@@ -114,6 +114,12 @@
                 <textarea asp-for="ActivityPrompt" class="form-control markdown-input markdown-input--compact" id="ActivityPrompt" rows="10"
                           placeholder="Pode usar Markdown: listas, **negrito**, `código`, blocos ``` ``` etc."></textarea>
                 <p class="small text-muted mt-1 mb-0">O enunciado é renderizado em Markdown na página da atividade do aluno.</p>
+                <div class="form-check mt-3">
+                    <input asp-for="RequiresGitHubDelivery" class="form-check-input" id="RequiresGitHubDelivery" />
+                    <label asp-for="RequiresGitHubDelivery" class="form-check-label">
+                        Entrega via GitHub (repositório obrigatório; PR opcional)
+                    </label>
+                </div>
             </div>
             <div class="preview-pane">
                 <div class="editor-toolbar">

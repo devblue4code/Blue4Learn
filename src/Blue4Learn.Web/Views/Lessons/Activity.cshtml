@@ -36,8 +36,16 @@
             <input type="hidden" name="lessonId" value="@Model.LessonId" />
             <input type="hidden" name="returnTo" value="activity" />
             <input type="hidden" name="ActivityId" value="@activity.ActivityId" />
-            <input type="hidden" name="TextResponse" value="@activity.TextResponse" />
-            <input type="hidden" name="GitHubUrl" value="@activity.GitHubUrl" />
+            @if (!activity.RequiresGitHubDelivery)
+            {
+                <input type="hidden" name="GitHubUrl" value="@activity.GitHubUrl" />
+                <input type="hidden" name="GitHubPrUrl" value="@activity.GitHubPrUrl" />
+                <input type="hidden" name="DeliveryNote" value="@activity.DeliveryNote" />
+            }
+            else
+            {
+                <input type="hidden" name="TextResponse" value="@activity.TextResponse" />
+            }
 
             <div class="ws-panel-head">
                 <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
@@ -72,6 +80,29 @@
                 <div class="callout callout-feedback mb-3">
                     <strong>Feedback da professora</strong>
                     <p class="mb-0">@activity.TeacherFeedback</p>
+                </div>
+            }
+
+            @if (activity.RequiresGitHubDelivery)
+            {
+                <div class="callout mb-3">
+                    <strong>Entrega via GitHub</strong>
+                    <p class="mb-0">Informe o repositório. O Pull Request e um recado curto são opcionais.</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="GitHubUrl">URL do repositório <span class="text-danger">*</span></label>
+                    <input id="GitHubUrl" name="GitHubUrl" class="form-control" value="@activity.GitHubUrl"
+                           placeholder="https://github.com/usuario/repositorio" required @(isReviewed ? "disabled" : null) />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="GitHubPrUrl">URL do Pull Request (opcional)</label>
+                    <input id="GitHubPrUrl" name="GitHubPrUrl" class="form-control" value="@activity.GitHubPrUrl"
+                           placeholder="https://github.com/usuario/repositorio/pull/1" @(isReviewed ? "disabled" : null) />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="DeliveryNote">Recado para a professora (opcional)</label>
+                    <textarea id="DeliveryNote" name="DeliveryNote" class="form-control" rows="2" maxlength="500"
+                              placeholder="Ex.: branch feature/login, pendências conhecidas…" @(isReviewed ? "disabled" : null)>@activity.DeliveryNote</textarea>
                 </div>
             }
 

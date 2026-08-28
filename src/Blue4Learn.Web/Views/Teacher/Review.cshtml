@@ -25,7 +25,38 @@
             <p class="text-break" style="white-space: pre-wrap">@(string.IsNullOrWhiteSpace(Model.SolutionDescription) ? "—" : Model.SolutionDescription)</p>
             <p><strong>Evidência textual:</strong></p>
             <p class="text-break" style="white-space: pre-wrap">@(string.IsNullOrWhiteSpace(Model.TextResponse) ? "—" : Model.TextResponse)</p>
-            @if (!string.IsNullOrWhiteSpace(Model.GitHubUrl))
+            @if (Model.RequiresGitHubDelivery || !string.IsNullOrWhiteSpace(Model.GitHubUrl))
+            {
+                <p class="mb-1"><strong>Entrega GitHub</strong></p>
+                <ul class="mb-3">
+                    <li>
+                        <strong>Repositório:</strong>
+                        @if (!string.IsNullOrWhiteSpace(Model.GitHubUrl))
+                        {
+                            <a href="@Model.GitHubUrl" target="_blank" rel="noopener">@Model.GitHubUrl</a>
+                        }
+                        else
+                        {
+                            <span class="text-danger">não informado</span>
+                        }
+                    </li>
+                    @if (!string.IsNullOrWhiteSpace(Model.GitHubPrUrl))
+                    {
+                        <li>
+                            <strong>Pull Request:</strong>
+                            <a href="@Model.GitHubPrUrl" target="_blank" rel="noopener">@Model.GitHubPrUrl</a>
+                        </li>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.DeliveryNote))
+                    {
+                        <li>
+                            <strong>Recado do aluno:</strong>
+                            <span class="text-break" style="white-space: pre-wrap">@Model.DeliveryNote</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.GitHubUrl))
             {
                 <p><strong>GitHub:</strong> <a href="@Model.GitHubUrl" target="_blank" rel="noopener">@Model.GitHubUrl</a></p>
             }

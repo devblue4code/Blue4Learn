@@ -109,6 +109,7 @@ public class Activity
     public string Title { get; set; } = string.Empty;
     public string Prompt { get; set; } = string.Empty;
     public DateTime? DueAtUtc { get; set; }
+    public bool RequiresGitHubDelivery { get; set; }
     public ICollection<ActivitySubmission> Submissions { get; set; } = [];
 }
 
@@ -121,6 +122,8 @@ public class ActivitySubmission
     public ApplicationUser User { get; set; } = null!;
     public string TextResponse { get; set; } = string.Empty;
     public string? GitHubUrl { get; set; }
+    public string? GitHubPrUrl { get; set; }
+    public string? DeliveryNote { get; set; }
     public string ProblemDescription { get; set; } = string.Empty;
     public string SolutionDescription { get; set; } = string.Empty;
     public string? TeacherFeedback { get; set; }

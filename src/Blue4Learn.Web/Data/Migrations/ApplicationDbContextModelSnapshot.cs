@@ -33,6 +33,9 @@ namespace Blue4Learn.Web.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("RequiresGitHubDelivery")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -51,6 +54,14 @@ namespace Blue4Learn.Web.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ActivityId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeliveryNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GitHubPrUrl")
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GitHubUrl")

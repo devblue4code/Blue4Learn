@@ -136,6 +136,7 @@ public class ActivityFormViewModel
     public string Prompt { get; set; } = string.Empty;
     public string PromptHtml { get; set; } = string.Empty;
     public DateTime? DueAtUtc { get; set; }
+    public bool RequiresGitHubDelivery { get; set; }
 
     [Display(Name = "Descrição do problema")]
     [StringLength(2000)]
@@ -153,6 +154,15 @@ public class ActivityFormViewModel
     [Url]
     [StringLength(500)]
     public string? GitHubUrl { get; set; }
+
+    [Display(Name = "URL do Pull Request")]
+    [Url]
+    [StringLength(500)]
+    public string? GitHubPrUrl { get; set; }
+
+    [Display(Name = "Recado para a professora (opcional)")]
+    [StringLength(500)]
+    public string? DeliveryNote { get; set; }
 
     public ActivityStatus Status { get; set; }
     public string? TeacherFeedback { get; set; }

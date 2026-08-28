@@ -64,6 +64,9 @@ public class LessonEditorViewModel
     [StringLength(2000)]
     public string? ActivityPrompt { get; set; }
 
+    [Display(Name = "Entrega via GitHub")]
+    public bool RequiresGitHubDelivery { get; set; }
+
     [Display(Name = "Importar arquivo .md")]
     public IFormFile? MarkdownFile { get; set; }
 

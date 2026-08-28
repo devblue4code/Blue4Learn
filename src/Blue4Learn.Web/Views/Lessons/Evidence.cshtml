@@ -39,6 +39,12 @@
             <input type="hidden" name="ActivityId" value="@activity.ActivityId" />
             <input type="hidden" name="ProblemDescription" value="@activity.ProblemDescription" />
             <input type="hidden" name="SolutionDescription" value="@activity.SolutionDescription" />
+            @if (activity.RequiresGitHubDelivery)
+            {
+                <input type="hidden" name="GitHubUrl" value="@activity.GitHubUrl" />
+                <input type="hidden" name="GitHubPrUrl" value="@activity.GitHubPrUrl" />
+                <input type="hidden" name="DeliveryNote" value="@activity.DeliveryNote" />
+            }
 
             <div class="ws-panel-head">
                 <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
@@ -65,11 +71,18 @@
                 <textarea id="TextResponse" name="TextResponse" class="form-control" rows="4"
                           @(isReviewed ? "disabled" : null)>@activity.TextResponse</textarea>
             </div>
-            <div class="mb-3">
-                <label class="form-label" for="GitHubUrl">Link do GitHub</label>
-                <input id="GitHubUrl" name="GitHubUrl" class="form-control" value="@activity.GitHubUrl"
-                       placeholder="https://github.com/..." @(isReviewed ? "disabled" : null) />
-            </div>
+            @if (!activity.RequiresGitHubDelivery)
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="GitHubUrl">Link do GitHub</label>
+                    <input id="GitHubUrl" name="GitHubUrl" class="form-control" value="@activity.GitHubUrl"
+                           placeholder="https://github.com/..." @(isReviewed ? "disabled" : null) />
+                </div>
+            }
+            else
+            {
+                <p class="ws-hint mb-3">O repositório e o PR são preenchidos na aba <strong>Atividade</strong>.</p>
+            }
             @if (!isReviewed)
             {
                 <div class="mb-3">
