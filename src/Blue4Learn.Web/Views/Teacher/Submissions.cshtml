@@ -1,6 +1,7 @@
 @model SubmissionListViewModel
 @{
     ViewData["Title"] = "Atividades enviadas";
+    var missingCount = Model.MissingGitHubCount;
 }
 
 <div class="page-header">
@@ -12,10 +13,21 @@
     <a class="btn btn-outline-primary" asp-action="Dashboard">Voltar ao painel</a>
 </div>
 
+<div class="filter-tabs mb-3">
+    <a class="@(Model.Filter == "all" ? "active" : null)" asp-action="Submissions" asp-route-filter="all">Todas</a>
+    <a class="@(Model.Filter == "missing-github" ? "active" : null)" asp-action="Submissions" asp-route-filter="missing-github">
+        Sem GitHub @(missingCount > 0 ? $"({missingCount})" : "")
+    </a>
+</div>
+
 @if (!Model.Items.Any())
 {
     <div class="soft-panel">
-        <p class="mb-0 text-muted">Ainda não há atividades enviadas.</p>
+        <p class="mb-0 text-muted">
+            @(Model.Filter == "missing-github"
+                ? "Nenhuma entrega pendente de link do GitHub."
+                : "Ainda não há atividades enviadas.")
+        </p>
     </div>
 }
 else
@@ -27,6 +39,7 @@ else
                     <th>Estudante</th>
                     <th>Aula</th>
                     <th>Status</th>
+                    <th>GitHub</th>
                     <th>Anexos</th>
                     <th>Atualizado</th>
                     <th></th>
@@ -48,6 +61,29 @@ else
                         @if (item.HasFeedback)
                         {
                             <div class="small text-muted">com feedback</div>
+                        }
+                        @if (item.MissingGitHubDelivery)
+                        {
+                            <div class="small text-danger">sem repositório</div>
+                        }
+                    </td>
+                    <td class="small">
+                        @if (!string.IsNullOrWhiteSpace(item.GitHubUrl))
+                        {
+                            <a href="@item.GitHubUrl" target="_blank" rel="noopener">Repositório</a>
+                            @if (!string.IsNullOrWhiteSpace(item.GitHubPrUrl))
+                            {
+                                <span class="text-muted"> · </span>
+                                <a href="@item.GitHubPrUrl" target="_blank" rel="noopener">PR</a>
+                            }
+                        }
+                        else if (item.RequiresGitHubDelivery)
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">não exigido</span>
                         }
                     </td>
                     <td>@item.AttachmentCount</td>

@@ -35,6 +35,8 @@ public class MyProgressItemViewModel
 public class SubmissionListViewModel
 {
     public string ClassName { get; set; } = string.Empty;
+    public string Filter { get; set; } = "all";
+    public int MissingGitHubCount { get; set; }
     public IReadOnlyList<SubmissionListItemViewModel> Items { get; set; } = [];
 }
 
@@ -48,6 +50,10 @@ public class SubmissionListItemViewModel
     public DateTime UpdatedAtUtc { get; set; }
     public int AttachmentCount { get; set; }
     public bool HasFeedback { get; set; }
+    public bool RequiresGitHubDelivery { get; set; }
+    public bool MissingGitHubDelivery { get; set; }
+    public string? GitHubUrl { get; set; }
+    public string? GitHubPrUrl { get; set; }
 }
 
 public class SubmissionReviewViewModel
@@ -64,6 +70,9 @@ public class SubmissionReviewViewModel
     public string SolutionDescription { get; set; } = string.Empty;
     public string TextResponse { get; set; } = string.Empty;
     public string? GitHubUrl { get; set; }
+    public string? GitHubPrUrl { get; set; }
+    public string? DeliveryNote { get; set; }
+    public bool RequiresGitHubDelivery { get; set; }
     public ActivityStatus Status { get; set; }
     public string? TeacherFeedback { get; set; }
     public IReadOnlyList<AttachmentItemViewModel> Attachments { get; set; } = [];

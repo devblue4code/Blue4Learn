@@ -105,6 +105,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ActivitySubmission>(e =>
         {
             e.HasIndex(x => new { x.ActivityId, x.UserId }).IsUnique();
+            e.Property(x => x.GitHubUrl).HasMaxLength(500);
+            e.Property(x => x.GitHubPrUrl).HasMaxLength(500);
+            e.Property(x => x.DeliveryNote).HasMaxLength(500);
         });
 
         builder.Entity<SubmissionAttachment>(e =>

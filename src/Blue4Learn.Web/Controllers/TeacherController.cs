@@ -276,7 +276,7 @@ public class TeacherController : Controller
         });
     }
 
-    public async Task<IActionResult> Submissions()
+    public async Task<IActionResult> Submissions(string? filter)
     {
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
@@ -287,6 +287,7 @@ public class TeacherController : Controller
             return View(new SubmissionListViewModel
             {
                 ClassName = "Turma",
+                Filter = filter ?? "all",
                 Items = []
             });
         }
@@ -322,13 +323,27 @@ public class TeacherController : Controller
                 Status = s.Status,
                 UpdatedAtUtc = s.UpdatedAtUtc,
                 AttachmentCount = s.Attachments.Count,
-                HasFeedback = s.TeacherFeedback != null && s.TeacherFeedback != ""
+                HasFeedback = s.TeacherFeedback != null && s.TeacherFeedback != "",
+                RequiresGitHubDelivery = s.Activity.RequiresGitHubDelivery,
+                MissingGitHubDelivery = s.Activity.RequiresGitHubDelivery
+                    && (s.GitHubUrl == null || s.GitHubUrl == ""),
+                GitHubUrl = s.GitHubUrl,
+                GitHubPrUrl = s.GitHubPrUrl
             })
             .ToListAsync();
+
+        var missingGitHubCount = items.Count(i => i.MissingGitHubDelivery);
+
+        if (string.Equals(filter, "missing-github", StringComparison.OrdinalIgnoreCase))
+        {
+            items = items.Where(i => i.MissingGitHubDelivery).ToList();
+        }
 
         return View(new SubmissionListViewModel
         {
             ClassName = classGroup?.Name ?? "Turma",
+            Filter = filter ?? "all",
+            MissingGitHubCount = missingGitHubCount,
             Items = items
         });
     }
@@ -580,6 +595,9 @@ public class TeacherController : Controller
         SolutionDescription = s.SolutionDescription,
         TextResponse = s.TextResponse,
         GitHubUrl = s.GitHubUrl,
+        GitHubPrUrl = s.GitHubPrUrl,
+        DeliveryNote = s.DeliveryNote,
+        RequiresGitHubDelivery = s.Activity.RequiresGitHubDelivery,
         Status = s.Status,
         TeacherFeedback = s.TeacherFeedback,
         Attachments = s.Attachments

@@ -186,10 +186,13 @@ public class LessonsController : Controller
                 Prompt = activity.Prompt,
                 PromptHtml = _markdown.ToSafeHtml(activity.Prompt),
                 DueAtUtc = activity.DueAtUtc,
+                RequiresGitHubDelivery = activity.RequiresGitHubDelivery,
                 ProblemDescription = submission?.ProblemDescription ?? string.Empty,
                 SolutionDescription = submission?.SolutionDescription ?? string.Empty,
                 TextResponse = submission?.TextResponse ?? string.Empty,
                 GitHubUrl = submission?.GitHubUrl,
+                GitHubPrUrl = submission?.GitHubPrUrl,
+                DeliveryNote = submission?.DeliveryNote,
                 Status = submission?.Status ?? ActivityStatus.NotStarted,
                 TeacherFeedback = submission?.TeacherFeedback,
                 Attachments = submission?.Attachments
@@ -465,8 +468,31 @@ public class LessonsController : Controller
         submission.SolutionDescription = model.SolutionDescription?.Trim() ?? string.Empty;
         submission.TextResponse = model.TextResponse?.Trim() ?? string.Empty;
         submission.GitHubUrl = string.IsNullOrWhiteSpace(model.GitHubUrl) ? null : model.GitHubUrl.Trim();
+        submission.GitHubPrUrl = string.IsNullOrWhiteSpace(model.GitHubPrUrl) ? null : model.GitHubPrUrl.Trim();
+        submission.DeliveryNote = string.IsNullOrWhiteSpace(model.DeliveryNote) ? null : model.DeliveryNote.Trim();
         submission.TeacherFeedback = previousFeedback;
         submission.UpdatedAtUtc = DateTime.UtcNow;
+
+        if (activity.RequiresGitHubDelivery)
+        {
+            if (!GitHubUrlValidator.TryValidateRepositoryUrl(submission.GitHubUrl, out var repoError))
+            {
+                TempData["Error"] = repoError;
+                return Back();
+            }
+
+            if (!GitHubUrlValidator.TryValidatePullRequestUrl(submission.GitHubPrUrl, out var prError))
+            {
+                TempData["Error"] = prError;
+                return Back();
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(submission.GitHubUrl)
+                 && !GitHubUrlValidator.TryValidateRepositoryUrl(submission.GitHubUrl, out var optionalRepoError))
+        {
+            TempData["Error"] = optionalRepoError;
+            return Back();
+        }
 
         if (model.Attachment is { Length: > 0 })
         {
@@ -490,12 +516,29 @@ public class LessonsController : Controller
             });
         }
 
-        var hasContent = !string.IsNullOrWhiteSpace(submission.TextResponse)
-            || !string.IsNullOrWhiteSpace(submission.GitHubUrl)
+        var hasGitHubDelivery = activity.RequiresGitHubDelivery
+            && !string.IsNullOrWhiteSpace(submission.GitHubUrl);
+
+        var hasOtherContent = !string.IsNullOrWhiteSpace(submission.TextResponse)
             || !string.IsNullOrWhiteSpace(submission.ProblemDescription)
+            || !string.IsNullOrWhiteSpace(submission.SolutionDescription)
             || submission.Attachments.Count > 0;
 
-        submission.Status = hasContent ? ActivityStatus.Submitted : ActivityStatus.InProgress;
+        var hasContent = hasGitHubDelivery || hasOtherContent;
+
+        if (activity.RequiresGitHubDelivery && hasOtherContent && !hasGitHubDelivery)
+        {
+            submission.Status = ActivityStatus.InProgress;
+            await _db.SaveChangesAsync();
+            TempData["Error"] = "Esta atividade exige a URL do repositório no GitHub.";
+            return Back();
+        }
+
+        submission.Status = hasContent
+            ? (activity.RequiresGitHubDelivery && !hasGitHubDelivery
+                ? ActivityStatus.InProgress
+                : ActivityStatus.Submitted)
+            : ActivityStatus.InProgress;
 
         await _db.SaveChangesAsync();
         TempData["Success"] = hasContent
