@@ -106,10 +106,25 @@
             <h2>Atividade e evidência</h2>
             <p>Enunciado que o aluno vê no Workspace para enviar a prática.</p>
         </div>
-        <label asp-for="ActivityPrompt" class="form-label"></label>
-        <textarea asp-for="ActivityPrompt" class="form-control" rows="8"
-                  placeholder="Pode usar Markdown: listas, **negrito**, `código`, blocos ``` ``` etc."></textarea>
-        <p class="small text-muted mt-1 mb-0">O enunciado é renderizado em Markdown na página da atividade do aluno.</p>
+        <div class="editor-grid editor-grid--activity">
+            <div class="editor-pane">
+                <div class="editor-toolbar">
+                    <label asp-for="ActivityPrompt" class="form-label h6 mb-0">Enunciado (Markdown)</label>
+                </div>
+                <textarea asp-for="ActivityPrompt" class="form-control markdown-input markdown-input--compact" id="ActivityPrompt" rows="10"
+                          placeholder="Pode usar Markdown: listas, **negrito**, `código`, blocos ``` ``` etc."></textarea>
+                <p class="small text-muted mt-1 mb-0">O enunciado é renderizado em Markdown na página da atividade do aluno.</p>
+            </div>
+            <div class="preview-pane">
+                <div class="editor-toolbar">
+                    <h2 class="h6 mb-0">Preview do enunciado</h2>
+                    <span class="small text-muted">como o estudante verá</span>
+                </div>
+                <div class="markdown-body" id="activity-preview">
+                    @Html.Raw(Model.ActivityPreviewHtml)
+                </div>
+            </div>
+        </div>
     </section>
 
     <div class="editor-grid">
@@ -149,7 +164,9 @@
         (() => {
             const form = document.getElementById("lesson-editor-form");
             const preview = document.getElementById("markdown-preview");
+            const activityPreview = document.getElementById("activity-preview");
             const markdown = document.getElementById("Markdown");
+            const activityPrompt = document.getElementById("ActivityPrompt");
             const objective = document.getElementById("Objective");
             const btn = document.getElementById("btn-preview");
             const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
@@ -203,27 +220,35 @@
                 }
             });
 
-            async function refreshPreview() {
+            async function refreshPreview(target, source) {
                 const body = new URLSearchParams();
-                body.set("Markdown", markdown.value);
+                body.set("Markdown", source.value);
                 body.set("__RequestVerificationToken", token);
                 const res = await fetch("@Url.Action("Preview")", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     body
                 });
-                preview.innerHTML = await res.text();
+                target.innerHTML = await res.text();
                 if (window.hljs) {
-                    preview.querySelectorAll("pre code").forEach((block) => window.hljs.highlightElement(block));
+                    target.querySelectorAll("pre code").forEach((block) => window.hljs.highlightElement(block));
                 }
             }
 
-            btn.addEventListener("click", refreshPreview);
+            btn.addEventListener("click", () => refreshPreview(preview, markdown));
             let timer;
             markdown.addEventListener("input", () => {
                 clearTimeout(timer);
-                timer = setTimeout(refreshPreview, 700);
+                timer = setTimeout(() => refreshPreview(preview, markdown), 700);
             });
+
+            if (activityPrompt && activityPreview) {
+                let activityTimer;
+                activityPrompt.addEventListener("input", () => {
+                    clearTimeout(activityTimer);
+                    activityTimer = setTimeout(() => refreshPreview(activityPreview, activityPrompt), 700);
+                });
+            }
 
             if (suggestBtn) {
                 suggestBtn.addEventListener("click", async () => {

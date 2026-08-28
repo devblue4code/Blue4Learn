@@ -2958,6 +2958,14 @@ code.copyable-code {
   min-height: 28rem;
   resize: vertical;
 }
+
+.markdown-input--compact {
+  min-height: 14rem;
+}
+
+.editor-grid--activity .preview-pane .markdown-body {
+  min-height: 14rem;
+}
 .preview-pane .markdown-body {
   min-height: 28rem;
   max-height: 70vh;

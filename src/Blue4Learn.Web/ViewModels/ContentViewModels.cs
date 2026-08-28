@@ -69,6 +69,7 @@ public class LessonEditorViewModel
 
     public IReadOnlyList<ModuleOptionViewModel> Modules { get; set; } = [];
     public string? PreviewHtml { get; set; }
+    public string? ActivityPreviewHtml { get; set; }
     public bool IsEdit => Id.HasValue;
     public bool AiEnabled { get; set; } = true;
 }
