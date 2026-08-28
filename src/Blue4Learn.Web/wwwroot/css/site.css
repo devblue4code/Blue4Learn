@@ -3458,3 +3458,26 @@ html[data-theme="dark"] .markdown-body {
     color: var(--text);
   }
 }
+
+.ws-learning-pct {
+  margin-top: .75rem;
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+.ws-learning-pct strong {
+  color: var(--blue);
+  margin-left: .35rem;
+}
+
+.teach-alert-reasons {
+  margin-top: .75rem;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.student-risk-banner ul {
+  margin-bottom: 0;
+  padding-left: 1.1rem;
+}

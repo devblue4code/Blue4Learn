@@ -11,12 +11,6 @@
         ActivityStatus.Reviewed => "Atividade corrigida",
         _ => "Sem atividade"
     };
-    string StatusLabel(MyProgressItemViewModel item)
-    {
-        if (!item.HasJournal) return "Registrar";
-        if (item.NeedsReview || item.HasOpenQuestion) return "Revisar";
-        return "Em dia";
-    }
     string EmptyCopy = Model.Filter switch
     {
         "missing" => "Nada pendente por aqui — ótimo sinal.",
@@ -51,7 +45,7 @@
 
     <aside class="dash-progress-card" aria-label="Progresso do diário">
         <div class="dash-progress-top">
-            <span>Diário</span>
+            <span>Aprendizado</span>
             <strong>@Model.ProgressPercent%</strong>
         </div>
         <div class="progress-track">
@@ -182,7 +176,14 @@
                         </span>
                     </span>
                     <span class="lesson-status @(statusClass == "is-done" ? "is-done" : "")">
-                        @StatusLabel(item)
+                        @if (item.LearningProgressPercent >= 100 && !item.NeedsReview && !item.HasOpenQuestion)
+                        {
+                            <text>Em dia</text>
+                        }
+                        else
+                        {
+                            <text>@item.LearningProgressPercent%</text>
+                        }
                     </span>
                 </a>
             }

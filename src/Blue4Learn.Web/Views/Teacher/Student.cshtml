@@ -27,6 +27,7 @@ else
                 <div class="d-flex justify-content-between gap-2 flex-wrap align-items-start">
                     <h2 class="h5 mb-2">@record.LessonTitle</h2>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <span class="prog-chip">@record.LearningProgressPercent% aprendizado</span>
                         @if (record.NeedsReview)
                         {
                             <span class="prog-chip is-warn">Precisa revisar</span>

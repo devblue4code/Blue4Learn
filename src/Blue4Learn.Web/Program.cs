@@ -84,6 +84,8 @@ builder.Services.AddHttpClient("GitHub", client =>
 });
 builder.Services.AddScoped<IGitHubCommitService, GitHubCommitService>();
 
+builder.Services.AddScoped<ILearningProgressService, LearningProgressService>();
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 

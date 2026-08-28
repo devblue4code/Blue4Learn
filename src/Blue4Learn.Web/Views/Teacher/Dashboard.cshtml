@@ -78,6 +78,7 @@ else
                 }
                 <a class="btn btn-outline-primary" asp-action="Submissions">Atividades</a>
                 <a class="btn btn-outline-primary" asp-action="Journals">Diários</a>
+                <a class="btn btn-outline-primary" asp-action="Alerts">Alertas</a>
                 <a class="btn btn-outline-primary" asp-controller="Classes" asp-action="Details" asp-route-id="@Model.ClassId">Membros</a>
                 <a class="btn btn-outline-primary" asp-controller="Content" asp-action="Index">Conteúdos</a>
                 <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Syllabus">Ementa</a>
@@ -254,11 +255,15 @@ else
                             </div>
                             <div class="teach-student-bar">
                                 <div class="progress-track">
-                                    <div class="progress-fill" style="width: @s.ProgressPercent%"></div>
+                                    <div class="progress-fill" style="width: @s.LearningProgressPercent%"></div>
                                 </div>
-                                <span>@s.JournalCount/@s.ExpectedJournals diários · @s.ProgressPercent%</span>
+                                <span>@s.LearningProgressPercent% aprendizado · @s.JournalCount/@s.ExpectedJournals diários</span>
                             </div>
                             <div class="teach-student-chips">
+                                @if (s.RiskReasonCount > 0)
+                                {
+                                    <span class="prog-chip is-warn">@s.RiskReasonCount pendência(s)</span>
+                                }
                                 @if (s.OpenQuestions > 0)
                                 {
                                     <span class="prog-chip is-warn">@s.OpenQuestions dúvida(s)</span>
@@ -276,6 +281,10 @@ else
                         </div>
                         <div class="teach-student-actions">
                             <a class="teach-student-link" asp-action="Student" asp-route-id="@s.UserId">Ver registro</a>
+                            @if (s.RiskReasonCount > 0)
+                            {
+                                <a class="teach-student-link is-soft" asp-action="Alerts">Ver alertas</a>
+                            }
                             @if (s.FocusLessonId is Guid lessonId)
                             {
                                 <a class="teach-student-link is-soft" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lessonId">Abrir aula</a>

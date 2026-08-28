@@ -17,19 +17,22 @@ public class LessonsController : Controller
     private readonly IMarkdownService _markdown;
     private readonly IFileStorageService _files;
     private readonly IAiTutorService _ai;
+    private readonly ILearningProgressService _progress;
 
     public LessonsController(
         ApplicationDbContext db,
         IAccessService access,
         IMarkdownService markdown,
         IFileStorageService files,
-        IAiTutorService ai)
+        IAiTutorService ai,
+        ILearningProgressService progress)
     {
         _db = db;
         _access = access;
         _markdown = markdown;
         _files = files;
         _ai = ai;
+        _progress = progress;
     }
 
     public async Task<IActionResult> Index()
@@ -205,6 +208,12 @@ public class LessonsController : Controller
                     }).ToList() ?? []
             }
         };
+
+        var lessonProgress = _progress.ComputeLessonProgress(journal, activity, submission);
+        vm.LessonLearningPercent = lessonProgress.Percent;
+        vm.RiskItems = _progress.BuildLessonRiskReasons(lesson, journal, activity, submission, DateTime.UtcNow)
+            .Select(r => r.Message)
+            .ToList();
 
         ApplyNextStep(vm);
         return (null, vm);

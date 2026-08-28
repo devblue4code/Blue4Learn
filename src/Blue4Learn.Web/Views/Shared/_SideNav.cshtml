@@ -60,6 +60,12 @@
 
         @if (isTeacher)
         {
+            <a class="@NavClass("Teacher", "Alerts")" asp-controller="Teacher" asp-action="Alerts">
+                <span class="app-nav-icon">
+                    <img src="~/img/icons/icon-nav-dashboard.svg" asp-append-version="true" alt="" width="18" height="18" />
+                </span>
+                <span>Alertas</span>
+            </a>
             <a class="@(coursesActive ? "app-nav-link is-active" : "app-nav-link")" asp-controller="Classes" asp-action="Index">
                 <span class="app-nav-icon">
                     <img src="~/img/icons/icon-nav-course.svg" asp-append-version="true" alt="" width="22" height="18" />

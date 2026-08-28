@@ -1,0 +1,118 @@
+@model TeacherAlertsViewModel
+@{
+    ViewData["Title"] = "Alertas";
+    ViewData["TopTitle"] = "Alertas";
+}
+
+@if (Model.ClassId == Guid.Empty)
+{
+    <section class="dash-hero">
+        <div class="dash-hero-copy" style="grid-column: 1 / -1;">
+            <p class="eyebrow">Acompanhamento</p>
+            <h1>Alunos em dificuldade</h1>
+            <p class="section-lead">Selecione ou crie uma turma para ver quem precisa de apoio e por quê.</p>
+            <a class="btn btn-primary" asp-controller="Classes" asp-action="Index">Ver turmas</a>
+        </div>
+    </section>
+}
+else
+{
+    <section class="dash-hero teach-hero">
+        <div class="dash-hero-copy">
+            <p class="eyebrow">Acompanhamento · @Model.CourseTitle</p>
+            <h1>Alunos em dificuldade</h1>
+            @if (Model.ClassOptions.Count > 1)
+            {
+                <form asp-action="SwitchClass" method="post" class="d-flex align-items-center gap-2 mb-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnTo" value="Alerts" />
+                    <label class="small text-muted mb-0" for="classId">Turma</label>
+                    <select id="classId" name="classId" class="form-select form-select-sm" style="max-width: 280px" onchange="this.form.submit()">
+                        @foreach (var option in Model.ClassOptions)
+                        {
+                            if (Model.ClassId == option.Id)
+                            {
+                                <option value="@option.Id" selected>@option.Name (@option.Code)</option>
+                            }
+                            else
+                            {
+                                <option value="@option.Id">@option.Name (@option.Code)</option>
+                            }
+                        }
+                    </select>
+                </form>
+            }
+            <p class="section-lead">
+                @Model.ClassName · @Model.AtRiskCount de @Model.StudentCount estudante(s) com pendências identificadas.
+            </p>
+            <div class="dash-actions">
+                <a class="btn btn-outline-primary" asp-action="Dashboard">Voltar ao painel</a>
+                <a class="btn btn-outline-primary" asp-action="Submissions">Atividades</a>
+                <a class="btn btn-outline-primary" asp-action="Journals">Diários</a>
+            </div>
+        </div>
+
+        <aside class="dash-progress-card" aria-label="Resumo de alertas">
+            <div class="dash-progress-top">
+                <span>Em atenção</span>
+                <strong>@Model.AtRiskCount</strong>
+            </div>
+            <p class="dash-next-hint mb-0">
+                Cada item abaixo mostra o motivo — diário, atividade, GitHub, quiz ou dúvida aberta.
+            </p>
+        </aside>
+    </section>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="soft-panel dash-empty">
+            <h3>Ninguém em dificuldade agora</h3>
+            <p class="mb-0 text-muted">A turma está em dia com diários, atividades e entregas obrigatórias.</p>
+        </div>
+    }
+    else
+    {
+        <section class="dash-section">
+            <div class="teach-student-list">
+                @foreach (var item in Model.Items)
+                {
+                    <article class="soft-panel teach-student needs-attention">
+                        <div class="teach-student-main">
+                            <div class="teach-student-head">
+                                <h3>@item.FullName</h3>
+                                <span class="prog-chip is-warn">@item.Reasons.Count pendência(s)</span>
+                            </div>
+                            <div class="teach-student-bar">
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: @item.LearningProgressPercent%"></div>
+                                </div>
+                                <span>@item.LearningProgressPercent% aprendizado</span>
+                            </div>
+                            <ul class="teach-alert-reasons mb-0">
+                                @foreach (var reason in item.Reasons)
+                                {
+                                    <li>@reason.Message</li>
+                                }
+                            </ul>
+                        </div>
+                        <div class="teach-student-actions">
+                            <a class="teach-student-link" asp-action="Student" asp-route-id="@item.UserId">Ver registro</a>
+                            @{
+                                var focusLessonId = item.Reasons.FirstOrDefault(r => r.LessonId.HasValue)?.LessonId;
+                                var focusSubmissionId = item.Reasons.FirstOrDefault(r => r.SubmissionId.HasValue)?.SubmissionId;
+                            }
+                            @if (focusLessonId is Guid lessonId)
+                            {
+                                <a class="teach-student-link is-soft" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lessonId">Abrir aula</a>
+                            }
+                            @if (focusSubmissionId is Guid submissionId)
+                            {
+                                <a class="teach-student-link is-soft" asp-action="Review" asp-route-id="@submissionId">Ver envio</a>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+}
