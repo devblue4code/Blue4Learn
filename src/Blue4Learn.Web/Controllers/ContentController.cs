@@ -350,6 +350,7 @@ public class ContentController : Controller
         }
 
         model.PreviewHtml ??= _markdown.ToSafeHtml(model.Markdown);
+        model.ActivityPreviewHtml ??= _markdown.ToSafeHtml(model.ActivityPrompt);
         return model;
     }
 
