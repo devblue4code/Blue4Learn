@@ -210,6 +210,28 @@ public class LessonsController : Controller
         return (null, vm);
     }
 
+    private async Task<IActionResult> ReturnActivityPageWithPostedValuesAsync(
+        Guid lessonId,
+        string? returnTo,
+        ActivityFormViewModel posted)
+    {
+        var (error, vm) = await TryLoadWorkspaceAsync(lessonId);
+        if (error is not null) return error;
+        if (vm?.Activity is null) return NotFound();
+
+        vm.Activity.ProblemDescription = posted.ProblemDescription?.Trim() ?? string.Empty;
+        vm.Activity.SolutionDescription = posted.SolutionDescription?.Trim() ?? string.Empty;
+        vm.Activity.TextResponse = posted.TextResponse?.Trim() ?? string.Empty;
+        vm.Activity.GitHubUrl = string.IsNullOrWhiteSpace(posted.GitHubUrl) ? null : posted.GitHubUrl.Trim();
+        vm.Activity.GitHubPrUrl = string.IsNullOrWhiteSpace(posted.GitHubPrUrl) ? null : posted.GitHubPrUrl.Trim();
+        vm.Activity.DeliveryNote = string.IsNullOrWhiteSpace(posted.DeliveryNote) ? null : posted.DeliveryNote.Trim();
+
+        var isActivity = string.Equals(returnTo, "activity", StringComparison.OrdinalIgnoreCase);
+        ViewData["WorkspaceSection"] = isActivity ? "activity" : "evidence";
+        ViewData["LessonId"] = lessonId;
+        return View(isActivity ? "Activity" : "Evidence", vm);
+    }
+
     private static void ApplyNextStep(LessonWorkspaceViewModel vm)
     {
         if (!vm.HasJournal)
@@ -431,6 +453,8 @@ public class LessonsController : Controller
                 : nameof(Evidence),
             new { id = lessonId });
 
+        var isActivityPage = string.Equals(returnTo, "activity", StringComparison.OrdinalIgnoreCase);
+
         if (user.TenantId is null)
         {
             TempData["Error"] = "Usuário sem instituição associada.";
@@ -462,37 +486,40 @@ public class LessonsController : Controller
             return Back();
         }
 
+        var repoUrl = string.IsNullOrWhiteSpace(model.GitHubUrl) ? null : model.GitHubUrl.Trim();
+        var prUrl = string.IsNullOrWhiteSpace(model.GitHubPrUrl) ? null : model.GitHubPrUrl.Trim();
+
+        if (activity.RequiresGitHubDelivery)
+        {
+            if (!GitHubUrlValidator.TryValidateRepositoryUrl(repoUrl, out var repoError))
+            {
+                TempData["Error"] = repoError;
+                return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+            }
+
+            if (!GitHubUrlValidator.TryValidatePullRequestUrl(prUrl, out var prError))
+            {
+                TempData["Error"] = prError;
+                return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(repoUrl)
+                 && !GitHubUrlValidator.TryValidateRepositoryUrl(repoUrl, out var optionalRepoError))
+        {
+            TempData["Error"] = optionalRepoError;
+            return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+        }
+
         var previousFeedback = submission.TeacherFeedback;
 
         submission.ProblemDescription = model.ProblemDescription?.Trim() ?? string.Empty;
         submission.SolutionDescription = model.SolutionDescription?.Trim() ?? string.Empty;
         submission.TextResponse = model.TextResponse?.Trim() ?? string.Empty;
-        submission.GitHubUrl = string.IsNullOrWhiteSpace(model.GitHubUrl) ? null : model.GitHubUrl.Trim();
-        submission.GitHubPrUrl = string.IsNullOrWhiteSpace(model.GitHubPrUrl) ? null : model.GitHubPrUrl.Trim();
+        submission.GitHubUrl = repoUrl;
+        submission.GitHubPrUrl = prUrl;
         submission.DeliveryNote = string.IsNullOrWhiteSpace(model.DeliveryNote) ? null : model.DeliveryNote.Trim();
         submission.TeacherFeedback = previousFeedback;
         submission.UpdatedAtUtc = DateTime.UtcNow;
-
-        if (activity.RequiresGitHubDelivery)
-        {
-            if (!GitHubUrlValidator.TryValidateRepositoryUrl(submission.GitHubUrl, out var repoError))
-            {
-                TempData["Error"] = repoError;
-                return Back();
-            }
-
-            if (!GitHubUrlValidator.TryValidatePullRequestUrl(submission.GitHubPrUrl, out var prError))
-            {
-                TempData["Error"] = prError;
-                return Back();
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(submission.GitHubUrl)
-                 && !GitHubUrlValidator.TryValidateRepositoryUrl(submission.GitHubUrl, out var optionalRepoError))
-        {
-            TempData["Error"] = optionalRepoError;
-            return Back();
-        }
 
         if (model.Attachment is { Length: > 0 })
         {
@@ -504,7 +531,7 @@ public class LessonsController : Controller
             if (!ok || file is null)
             {
                 TempData["Error"] = error ?? "Falha ao enviar anexo.";
-                return Back();
+                return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
             }
 
             submission.Attachments.Add(new SubmissionAttachment
@@ -531,7 +558,7 @@ public class LessonsController : Controller
             submission.Status = ActivityStatus.InProgress;
             await _db.SaveChangesAsync();
             TempData["Error"] = "Esta atividade exige a URL do repositório no GitHub.";
-            return Back();
+            return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
         }
 
         submission.Status = hasContent
@@ -542,8 +569,12 @@ public class LessonsController : Controller
 
         await _db.SaveChangesAsync();
         TempData["Success"] = hasContent
-            ? "Evidência enviada. A professora poderá revisar em breve."
-            : "Rascunho da atividade salvo.";
+            ? (isActivityPage
+                ? "Atividade salva. A professora poderá revisar em breve."
+                : "Evidência enviada. A professora poderá revisar em breve.")
+            : (isActivityPage
+                ? "Rascunho da atividade salvo."
+                : "Rascunho da evidência salvo.");
         return Back();
     }
 }
