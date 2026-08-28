@@ -27,6 +27,7 @@ public class MyProgressItemViewModel
     public bool HasOpenQuestion { get; set; }
     public bool IsNext { get; set; }
     public ActivityStatus? ActivityStatus { get; set; }
+    public int LearningProgressPercent { get; set; }
     public DateTime? LastJournalUpdateUtc { get; set; }
 
     public bool RequiresAttention => !HasJournal || NeedsReview || HasOpenQuestion;

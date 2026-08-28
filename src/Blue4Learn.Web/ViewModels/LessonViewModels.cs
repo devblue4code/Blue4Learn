@@ -12,7 +12,9 @@ public class HomeDashboardViewModel
     public int PendingCount { get; set; }
     public int NeedsReviewCount { get; set; }
     public int ProgressPercent { get; set; }
+    public int LearningProgressPercent { get; set; }
     public LessonSummaryViewModel? NextLesson { get; set; }
+    public StudentRiskBannerViewModel? RiskBanner { get; set; }
     public IReadOnlyList<ClassSummaryViewModel> Classes { get; set; } = [];
     public IReadOnlyList<LessonSummaryViewModel> RecentLessons { get; set; } = [];
 }
@@ -34,6 +36,7 @@ public class LessonSummaryViewModel
     public string Objective { get; set; } = string.Empty;
     public bool HasJournal { get; set; }
     public bool NeedsReview { get; set; }
+    public int LearningProgressPercent { get; set; }
     public int SortOrder { get; set; }
     public bool IsNext { get; set; }
 }
@@ -52,10 +55,13 @@ public class LessonWorkspaceViewModel
     public ActivityFormViewModel? Activity { get; set; }
     public IReadOnlyList<ConceptOptionViewModel> Concepts { get; set; } = [];
     public int ProgressPercent { get; set; }
+    public int LessonLearningPercent { get; set; }
     public int ModuleLessonCount { get; set; }
     public int RegisteredInModule { get; set; }
     public bool HasJournal { get; set; }
     public int SortOrder { get; set; }
+
+    public IReadOnlyList<string> RiskItems { get; set; } = [];
 
     public bool JournalDone => HasJournal;
     public bool JournalNeedsAttention => HasJournal && Journal.NeedsReview;
@@ -224,14 +230,60 @@ public class StudentProgressViewModel
     public int JournalCount { get; set; }
     public int ExpectedJournals { get; set; }
     public int ProgressPercent { get; set; }
+    public int LearningProgressPercent { get; set; }
     public int OpenQuestions { get; set; }
     public int NeedsReviewCount { get; set; }
     public int SubmittedActivities { get; set; }
     public int AwaitingFeedback { get; set; }
     public Guid? FocusLessonId { get; set; }
     public Guid? FocusSubmissionId { get; set; }
+    public int RiskReasonCount { get; set; }
     public bool NeedsAttention => OpenQuestions > 0 || NeedsReviewCount > 0 || AwaitingFeedback > 0
+        || RiskReasonCount > 0
         || (ExpectedJournals > 0 && JournalCount < ExpectedJournals);
+}
+
+public class StudentRiskBannerViewModel
+{
+    public IReadOnlyList<string> Items { get; set; } = [];
+    public int LearningProgressPercent { get; set; }
+    public bool HasItems => Items.Count > 0;
+}
+
+public class LearningRiskReason
+{
+    public string Code { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public Guid? LessonId { get; set; }
+    public string? LessonTitle { get; set; }
+    public Guid? SubmissionId { get; set; }
+    public Guid? QuestionId { get; set; }
+}
+
+public class StudentLearningSummary
+{
+    public int LearningProgressPercent { get; set; }
+    public int RiskReasonCount { get; set; }
+}
+
+public class TeacherAlertsViewModel
+{
+    public Guid ClassId { get; set; }
+    public string ClassName { get; set; } = string.Empty;
+    public string ClassCode { get; set; } = string.Empty;
+    public string CourseTitle { get; set; } = string.Empty;
+    public int StudentCount { get; set; }
+    public int AtRiskCount { get; set; }
+    public IReadOnlyList<TeacherClassOptionViewModel> ClassOptions { get; set; } = [];
+    public IReadOnlyList<StudentAlertItemViewModel> Items { get; set; } = [];
+}
+
+public class StudentAlertItemViewModel
+{
+    public string UserId { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public int LearningProgressPercent { get; set; }
+    public IReadOnlyList<LearningRiskReason> Reasons { get; set; } = [];
 }
 
 public class QuestionFeedItemViewModel
@@ -261,6 +313,7 @@ public class StudentLessonRecordViewModel
     public bool NeedsReview { get; set; }
     public Guid? SubmissionId { get; set; }
     public ActivityStatus? ActivityStatus { get; set; }
+    public int LearningProgressPercent { get; set; }
     public IReadOnlyList<string> Questions { get; set; } = [];
     public IReadOnlyList<string> Concepts { get; set; } = [];
 }

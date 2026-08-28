@@ -19,6 +19,7 @@ public class TeacherController : Controller
     private readonly IMarkdownService _markdown;
     private readonly IAiTutorService _ai;
     private readonly IGitHubCommitService _github;
+    private readonly ILearningProgressService _progress;
 
     public TeacherController(
         ApplicationDbContext db,
@@ -26,7 +27,8 @@ public class TeacherController : Controller
         ILearningContextService context,
         IMarkdownService markdown,
         IAiTutorService ai,
-        IGitHubCommitService github)
+        IGitHubCommitService github,
+        ILearningProgressService progress)
     {
         _db = db;
         _access = access;
@@ -34,6 +36,7 @@ public class TeacherController : Controller
         _markdown = markdown;
         _ai = ai;
         _github = github;
+        _progress = progress;
     }
 
     public async Task<IActionResult> Dashboard()
@@ -82,7 +85,9 @@ public class TeacherController : Controller
             .ToListAsync();
 
         var publishedLessons = await _db.Lessons
-            .CountAsync(l => l.Status == ContentStatus.Published && l.Module.CourseId == selectedCourseId);
+            .CountAsync(l => l.Status == ContentStatus.Published && l.ClassGroupId == classGroup.Id);
+
+        var learningSummaries = await _progress.GetStudentLearningSummariesAsync(classGroup, studentIds);
 
         var journals = await _db.StudentJournalEntries
             .AsNoTracking()
@@ -142,6 +147,8 @@ public class TeacherController : Controller
                 .Select(x => (Guid?)x.Id)
                 .FirstOrDefault();
 
+            var summary = learningSummaries.GetValueOrDefault(s.Id);
+
             return new StudentProgressViewModel
             {
                 UserId = s.Id,
@@ -151,6 +158,8 @@ public class TeacherController : Controller
                 ProgressPercent = publishedLessons == 0
                     ? 0
                     : (int)Math.Round(100.0 * journalCount / publishedLessons),
+                LearningProgressPercent = summary?.LearningProgressPercent ?? 0,
+                RiskReasonCount = summary?.RiskReasonCount ?? 0,
                 OpenQuestions = studentJournals.SelectMany(j => j.Questions).Count(q => q.Status == QuestionStatus.Open),
                 NeedsReviewCount = studentJournals.Count(j => j.NeedsReview),
                 SubmittedActivities = submissions.Count(x => x.UserId == s.Id),
@@ -203,6 +212,38 @@ public class TeacherController : Controller
             Students = studentProgress,
             RecentQuestions = recentQuestions
         });
+    }
+
+    public async Task<IActionResult> Alerts()
+    {
+        var user = await _access.GetCurrentUserAsync(User);
+        if (user is null) return Challenge();
+
+        var classOptions = await LoadClassOptionsAsync(user);
+        var classGroup = await _context.ResolveClassAsync(user);
+        if (classGroup is null)
+        {
+            return View(new TeacherAlertsViewModel
+            {
+                ClassOptions = classOptions
+            });
+        }
+
+        var classMemberIds = await _db.Enrollments
+            .AsNoTracking()
+            .Where(e => e.ClassGroupId == classGroup.Id)
+            .Select(e => e.UserId)
+            .Distinct()
+            .ToListAsync();
+        var classMemberSet = classMemberIds.ToHashSet();
+        var studentIds = (await _access.GetStudentIdsInSharedClassesAsync(user))
+            .Where(classMemberSet.Contains)
+            .Distinct()
+            .ToList();
+
+        var vm = await _progress.GetTeacherAlertsAsync(classGroup, studentIds);
+        vm.ClassOptions = classOptions;
+        return View(vm);
     }
 
     public async Task<IActionResult> Journals(string? filter = null)
@@ -350,7 +391,7 @@ public class TeacherController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SwitchClass(Guid classId)
+    public async Task<IActionResult> SwitchClass(Guid classId, string? returnTo = null)
     {
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
@@ -362,7 +403,9 @@ public class TeacherController : Controller
         }
 
         TempData["Success"] = $"Turma selecionada: {selected.Name}.";
-        return RedirectToAction(nameof(Dashboard));
+        return string.Equals(returnTo, "Alerts", StringComparison.OrdinalIgnoreCase)
+            ? RedirectToAction(nameof(Alerts))
+            : RedirectToAction(nameof(Dashboard));
     }
 
     [HttpGet]
@@ -502,44 +545,99 @@ public class TeacherController : Controller
         if (student is null) return NotFound();
 
         var courseIds = await _access.GetAccessibleCourseIdsAsync(teacher);
+        var classGroup = await _access.GetPrimaryClassAsync(teacher);
+        var lessons = classGroup is null
+            ? []
+            : await _db.Lessons
+                .AsNoTracking()
+                .Include(l => l.Activities)
+                .Where(l => l.ClassGroupId == classGroup.Id && l.Status == ContentStatus.Published)
+                .OrderBy(l => l.SortOrder)
+                .ToListAsync();
+
         var journals = await _db.StudentJournalEntries
             .AsNoTracking()
             .Include(j => j.Lesson).ThenInclude(l => l.Module)
+            .Include(j => j.Lesson).ThenInclude(l => l.Activities)
             .Include(j => j.Questions)
             .Include(j => j.ConceptMarks).ThenInclude(m => m.Concept)
             .Where(j => j.UserId == id && courseIds.Contains(j.Lesson.Module.CourseId))
             .OrderBy(j => j.Lesson.SortOrder)
             .ToListAsync();
 
-        var lessonIds = journals.Select(j => j.LessonId).ToList();
+        var lessonIds = lessons.Select(l => l.Id).ToList();
+        if (lessonIds.Count == 0)
+        {
+            lessonIds = journals.Select(j => j.LessonId).ToList();
+        }
+
         var submissions = await _db.ActivitySubmissions
             .AsNoTracking()
+            .Include(s => s.Attachments)
             .Include(s => s.Activity)
             .Where(s => s.UserId == id
-                        && lessonIds.Contains(s.Activity.LessonId)
-                        && s.Status >= ActivityStatus.Submitted)
+                        && lessonIds.Contains(s.Activity.LessonId))
             .ToListAsync();
 
-        var records = journals.Select(j =>
+        var records = lessons.Select(lesson =>
         {
-            var submission = submissions
-                .Where(s => s.Activity.LessonId == j.LessonId)
-                .OrderByDescending(s => s.UpdatedAtUtc)
-                .FirstOrDefault();
+            var journal = journals.FirstOrDefault(j => j.LessonId == lesson.Id);
+            var activity = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault();
+            var submission = activity is null
+                ? null
+                : submissions.FirstOrDefault(s => s.ActivityId == activity.Id);
+
+            if (journal is null && submission is null)
+            {
+                return null;
+            }
+
+            var progress = _progress.ComputeLessonProgress(journal, activity, submission);
 
             return new StudentLessonRecordViewModel
             {
-                LessonId = j.LessonId,
-                LessonTitle = j.Lesson.Title,
-                Note = j.Note,
-                Reflection = j.Reflection,
-                NeedsReview = j.NeedsReview,
+                LessonId = lesson.Id,
+                LessonTitle = lesson.Title,
+                Note = journal?.Note ?? string.Empty,
+                Reflection = journal?.Reflection ?? string.Empty,
+                NeedsReview = journal?.NeedsReview ?? false,
                 SubmissionId = submission?.Id,
                 ActivityStatus = submission?.Status,
-                Questions = j.Questions.Select(q => q.Text).ToList(),
-                Concepts = j.ConceptMarks.Select(m => m.Concept.Name + (m.Understood ? " ✓" : " ?")).ToList()
+                LearningProgressPercent = progress.Percent,
+                Questions = journal?.Questions.Select(q => q.Text).ToList() ?? [],
+                Concepts = journal?.ConceptMarks.Select(m => m.Concept.Name + (m.Understood ? " ✓" : " ?")).ToList() ?? []
             };
-        }).ToList();
+        })
+        .Where(r => r is not null)
+        .Cast<StudentLessonRecordViewModel>()
+        .ToList();
+
+        if (records.Count == 0)
+        {
+            records = journals.Select(j =>
+            {
+                var submission = submissions
+                    .Where(s => s.Activity.LessonId == j.LessonId)
+                    .OrderByDescending(s => s.UpdatedAtUtc)
+                    .FirstOrDefault();
+                var lesson = j.Lesson;
+                var activity = lesson.Activities?.OrderBy(a => a.Title).FirstOrDefault();
+
+                return new StudentLessonRecordViewModel
+                {
+                    LessonId = j.LessonId,
+                    LessonTitle = j.Lesson.Title,
+                    Note = j.Note,
+                    Reflection = j.Reflection,
+                    NeedsReview = j.NeedsReview,
+                    SubmissionId = submission?.Id,
+                    ActivityStatus = submission?.Status,
+                    LearningProgressPercent = _progress.ComputeLessonProgress(j, activity, submission).Percent,
+                    Questions = j.Questions.Select(q => q.Text).ToList(),
+                    Concepts = j.ConceptMarks.Select(m => m.Concept.Name + (m.Understood ? " ✓" : " ?")).ToList()
+                };
+            }).ToList();
+        }
 
         return View(new StudentDetailViewModel
         {

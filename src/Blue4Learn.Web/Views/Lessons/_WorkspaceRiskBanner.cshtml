@@ -1,0 +1,13 @@
+@model LessonWorkspaceViewModel
+@if (Model.RiskItems.Any())
+{
+    <div class="alert alert-info alert-soft student-risk-banner mb-3" role="status">
+        <p class="mb-1"><strong>Nesta aula, ainda falta:</strong></p>
+        <ul class="mb-0">
+            @foreach (var item in Model.RiskItems)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    </div>
+}

@@ -13,11 +13,13 @@ public class ProgressController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly IAccessService _access;
+    private readonly ILearningProgressService _progress;
 
-    public ProgressController(ApplicationDbContext db, IAccessService access)
+    public ProgressController(ApplicationDbContext db, IAccessService access, ILearningProgressService progress)
     {
         _db = db;
         _access = access;
+        _progress = progress;
     }
 
     public async Task<IActionResult> Index(string? filter)
@@ -51,6 +53,7 @@ public class ProgressController : Controller
         var activityIds = lessons.SelectMany(l => l.Activities).Select(a => a.Id).ToList();
         var submissions = await _db.ActivitySubmissions
             .AsNoTracking()
+            .Include(s => s.Attachments)
             .Where(s => s.UserId == user.Id && activityIds.Contains(s.ActivityId))
             .ToListAsync();
 
@@ -61,6 +64,7 @@ public class ProgressController : Controller
             var submission = activity is null
                 ? null
                 : submissions.FirstOrDefault(s => s.ActivityId == activity.Id);
+            var lessonProgress = _progress.ComputeLessonProgress(journal, activity, submission);
 
             return new MyProgressItemViewModel
             {
@@ -72,6 +76,7 @@ public class ProgressController : Controller
                 NeedsReview = journal?.NeedsReview == true,
                 HasOpenQuestion = journal?.Questions.Any(q => q.Status == QuestionStatus.Open) == true,
                 ActivityStatus = submission?.Status,
+                LearningProgressPercent = lessonProgress.Percent,
                 LastJournalUpdateUtc = journal?.UpdatedAtUtc
             };
         }).ToList();
@@ -87,14 +92,17 @@ public class ProgressController : Controller
         var registered = items.Count(i => i.HasJournal);
         var reviewCount = items.Count(i => i.NeedsReview || i.HasOpenQuestion);
         var missingCount = items.Count(i => !i.HasJournal);
-        var doneCount = items.Count(i => i.HasJournal && !i.NeedsReview && !i.HasOpenQuestion);
+        var doneCount = items.Count(i => i.LearningProgressPercent >= 100);
         var total = items.Count;
+        var learningPercent = total == 0
+            ? 0
+            : (int)Math.Round(items.Average(i => i.LearningProgressPercent));
 
         var filtered = filter switch
         {
             "review" => items.Where(i => i.NeedsReview || i.HasOpenQuestion).ToList(),
             "missing" => items.Where(i => !i.HasJournal).ToList(),
-            "done" => items.Where(i => i.HasJournal && !i.NeedsReview && !i.HasOpenQuestion).ToList(),
+            "done" => items.Where(i => i.LearningProgressPercent >= 100 && !i.NeedsReview && !i.HasOpenQuestion).ToList(),
             _ => items
         };
 
@@ -111,7 +119,7 @@ public class ProgressController : Controller
             NeedsReviewCount = reviewCount,
             MissingCount = missingCount,
             DoneCount = doneCount,
-            ProgressPercent = total == 0 ? 0 : (int)Math.Round(100.0 * registered / total),
+            ProgressPercent = learningPercent,
             NextAction = nextAction,
             Items = filtered
         });

@@ -10,6 +10,19 @@
             : "Boa noite";
 }
 
+@if (!Model.IsTeacher && Model.RiskBanner?.HasItems == true)
+{
+    <div class="alert alert-info alert-soft student-risk-banner mb-4" role="status">
+        <p class="mb-1"><strong>Para seguir bem na disciplina:</strong></p>
+        <ul class="mb-0">
+            @foreach (var item in Model.RiskBanner.Items)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    </div>
+}
+
 <section class="dash-hero">
     <div class="dash-hero-copy">
         <p class="eyebrow">@greeting, @Model.FirstName</p>
@@ -41,11 +54,11 @@
 
     <aside class="dash-progress-card" aria-label="Seu progresso">
         <div class="dash-progress-top">
-            <span>Seu ritmo</span>
-            <strong>@Model.ProgressPercent%</strong>
+            <span>@(Model.IsTeacher ? "Seu ritmo" : "Aprendizado")</span>
+            <strong>@(Model.IsTeacher ? Model.ProgressPercent : Model.LearningProgressPercent)%</strong>
         </div>
         <div class="progress-track">
-            <div class="progress-fill" style="width: @Model.ProgressPercent%"></div>
+            <div class="progress-fill" style="width: @(Model.IsTeacher ? Model.ProgressPercent : Model.LearningProgressPercent)%"></div>
         </div>
         <div class="dash-progress-stats">
             <div>
@@ -172,7 +185,7 @@
                         }
                         else
                         {
-                            <text>Registrado</text>
+                            <text>@lesson.LearningProgressPercent%</text>
                         }
                     </span>
                 </a>

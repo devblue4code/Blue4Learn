@@ -13,11 +13,13 @@ public class HomeController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly IAccessService _access;
+    private readonly ILearningProgressService _progress;
 
-    public HomeController(ApplicationDbContext db, IAccessService access)
+    public HomeController(ApplicationDbContext db, IAccessService access, ILearningProgressService progress)
     {
         _db = db;
         _access = access;
+        _progress = progress;
     }
 
     [AllowAnonymous]
@@ -86,21 +88,53 @@ public class HomeController : Controller
         }
 
         var classGroupIds = await _access.GetAccessibleClassGroupIdsAsync(user);
-        var lessons = await _db.Lessons
+        var lessonsQuery = _db.Lessons
             .AsNoTracking()
-            .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId))
+            .Include(l => l.Module)
+            .Include(l => l.Activities)
+            .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId));
+
+        var lessonsData = await lessonsQuery
             .OrderBy(l => l.SortOrder)
-            .Select(l => new LessonSummaryViewModel
+            .ToListAsync();
+
+        var lessonIds = lessonsData.Select(l => l.Id).ToList();
+        var journals = await _db.StudentJournalEntries
+            .AsNoTracking()
+            .Include(j => j.Questions)
+            .Where(j => j.UserId == user.Id && lessonIds.Contains(j.LessonId))
+            .ToListAsync();
+
+        var activityIds = lessonsData.SelectMany(l => l.Activities).Select(a => a.Id).ToList();
+        var submissions = activityIds.Count == 0
+            ? []
+            : await _db.ActivitySubmissions
+                .AsNoTracking()
+                .Include(s => s.Attachments)
+                .Where(s => s.UserId == user.Id && activityIds.Contains(s.ActivityId))
+                .ToListAsync();
+
+        var lessons = lessonsData.Select(l =>
+        {
+            var journal = journals.FirstOrDefault(j => j.LessonId == l.Id);
+            var activity = l.Activities.OrderBy(a => a.Title).FirstOrDefault();
+            var submission = activity is null
+                ? null
+                : submissions.FirstOrDefault(s => s.ActivityId == activity.Id);
+            var progress = _progress.ComputeLessonProgress(journal, activity, submission);
+
+            return new LessonSummaryViewModel
             {
                 Id = l.Id,
                 Title = l.Title,
                 ModuleTitle = l.Module.Title,
                 Objective = l.Objective,
                 SortOrder = l.SortOrder,
-                HasJournal = l.JournalEntries.Any(j => j.UserId == user.Id),
-                NeedsReview = l.JournalEntries.Any(j => j.UserId == user.Id && j.NeedsReview)
-            })
-            .ToListAsync();
+                HasJournal = journal is not null,
+                NeedsReview = journal?.NeedsReview == true,
+                LearningProgressPercent = progress.Percent
+            };
+        }).ToList();
 
         var next = lessons.FirstOrDefault(l => !l.HasJournal)
                    ?? lessons.FirstOrDefault(l => l.NeedsReview)
@@ -113,6 +147,17 @@ public class HomeController : Controller
 
         var registered = lessons.Count(l => l.HasJournal);
         var total = lessons.Count;
+        var journalPercent = total == 0 ? 0 : (int)Math.Round(100.0 * registered / total);
+        var learningPercent = total == 0
+            ? 0
+            : (int)Math.Round(lessons.Average(l => l.LearningProgressPercent));
+
+        StudentRiskBannerViewModel? riskBanner = null;
+        if (!isTeacher)
+        {
+            riskBanner = await _progress.GetStudentRiskBannerAsync(user, classGroupIds);
+        }
+
         var firstName = user.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
                         ?? user.FullName;
 
@@ -126,7 +171,9 @@ public class HomeController : Controller
             RegisteredCount = registered,
             PendingCount = Math.Max(0, total - registered),
             NeedsReviewCount = lessons.Count(l => l.NeedsReview),
-            ProgressPercent = total == 0 ? 0 : (int)Math.Round(100.0 * registered / total),
+            ProgressPercent = isTeacher ? journalPercent : learningPercent,
+            LearningProgressPercent = learningPercent,
+            RiskBanner = riskBanner,
             NextLesson = next
         };
 
