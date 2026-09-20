@@ -46,9 +46,9 @@ public class LessonEditorViewModel
     [Display(Name = "Objetivo")]
     public string Objective { get; set; } = string.Empty;
 
-    [Range(1, 999)]
+    [Range(0, 999)]
     [Display(Name = "Ordem")]
-    public int SortOrder { get; set; } = 1;
+    public int SortOrder { get; set; }
 
     [Display(Name = "Status")]
     public ContentStatus Status { get; set; } = ContentStatus.Draft;

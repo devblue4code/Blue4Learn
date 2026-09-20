@@ -37,8 +37,18 @@
                 <span asp-validation-for="Slug" class="text-danger small"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="SortOrder" class="form-label"></label>
-                <input asp-for="SortOrder" class="form-control" />
+                <label class="form-label">Ordem</label>
+                @if (Model.IsEdit)
+                {
+                    <input asp-for="SortOrder" class="form-control" readonly />
+                    <p class="small text-muted mb-0">Definida automaticamente na criação.</p>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="SortOrder" />
+                    <input class="form-control" value="Automática (próxima do módulo)" disabled />
+                    <p class="small text-muted mb-0">A ordem será a próxima disponível no módulo.</p>
+                }
             </div>
             <div class="col-md-6">
                 <label asp-for="ModuleId" class="form-label"></label>
