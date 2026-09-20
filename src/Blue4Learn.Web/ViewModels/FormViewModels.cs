@@ -125,6 +125,7 @@ public class FormFillViewModel
     public string LessonTitle { get; set; } = string.Empty;
     public string LessonContext { get; set; } = string.Empty;
     public bool AlreadyResponded { get; set; }
+    public bool IsTeacherPreview { get; set; }
     public List<FormFillQuestionViewModel> Questions { get; set; } = [];
 }
 

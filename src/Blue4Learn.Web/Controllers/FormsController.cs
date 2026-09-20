@@ -443,7 +443,7 @@ public class FormsController : Controller
 
         if (await _access.IsTeacherOrAdminAsync(user))
         {
-            return RedirectToAction(nameof(Edit), new { id });
+            return RedirectToAction(nameof(Preview), new { id });
         }
 
         var form = await LoadPublishedFormForStudentAsync(user, id);
@@ -455,6 +455,22 @@ public class FormsController : Controller
             .FirstOrDefaultAsync(r => r.FormId == id && r.UserId == user.Id);
 
         return View(ToFillVm(form, existing));
+    }
+
+    /// <summary>Preview do formulário como o estudante vê (professora/admin).</summary>
+    [Authorize(Roles = $"{AppRoles.Teacher},{AppRoles.Admin}")]
+    [HttpGet]
+    public async Task<IActionResult> Preview(Guid id)
+    {
+        var user = await _access.GetCurrentUserAsync(User);
+        if (user is null) return Challenge();
+
+        var form = await LoadFormForTeacherAsync(user, id);
+        if (form is null) return NotFound();
+
+        var vm = ToFillVm(form, existing: null);
+        vm.IsTeacherPreview = true;
+        return View("Fill", vm);
     }
 
     [HttpPost]

@@ -1,6 +1,6 @@
 @model FormFillViewModel
 @{
-    ViewData["Title"] = Model.Title;
+    ViewData["Title"] = Model.IsTeacherPreview ? $"Preview · {Model.Title}" : Model.Title;
     ViewData["TopTitle"] = "Atividades";
 }
 
@@ -12,13 +12,31 @@
         {
             <p class="section-lead">@Model.Description</p>
         }
-        @if (Model.AlreadyResponded)
+        @if (Model.IsTeacherPreview)
+        {
+            <p class="small text-muted mb-0">Preview como o estudante vê — as respostas não são enviadas.</p>
+        }
+        else if (Model.AlreadyResponded)
         {
             <p class="small text-muted mb-0">Você já enviou respostas — pode atualizar e enviar de novo.</p>
         }
     </div>
-    <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Voltar</a>
+    <div class="d-flex gap-2 flex-wrap">
+        @if (Model.IsTeacherPreview)
+        {
+            <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.FormId">Construtor</a>
+            <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Ver aula</a>
+        }
+        <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Voltar</a>
+    </div>
 </div>
+
+@if (Model.IsTeacherPreview)
+{
+    <div class="alert alert-info soft-panel mb-3" role="status">
+        Você está no <strong>modo preview</strong>. Experimente as perguntas; o envio fica desativado.
+    </div>
+}
 
 <form asp-action="Fill" method="post" class="soft-panel" style="max-width: 720px">
     @Html.AntiForgeryToken()
@@ -46,11 +64,13 @@
             {
                 case FormQuestionType.ShortText:
                     <input class="form-control" name="Questions[@i].TextValue" value="@q.TextValue"
-                           maxlength="500" @(q.IsRequired ? "required" : null) />
+                           maxlength="500"
+                           @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null)) />
                     break;
                 case FormQuestionType.Paragraph:
                     <textarea class="form-control" name="Questions[@i].TextValue" rows="4"
-                              maxlength="4000" @(q.IsRequired ? "required" : null)>@q.TextValue</textarea>
+                              maxlength="4000"
+                              @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null))>@q.TextValue</textarea>
                     break;
                 case FormQuestionType.SingleChoice:
                     @foreach (var opt in q.Options)
@@ -60,7 +80,7 @@
                             <input class="form-check-input" type="radio"
                                    name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
                                    @(q.SelectedOptions.Contains(opt) ? "checked" : null)
-                                   @(q.IsRequired ? "required" : null) />
+                                   @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null)) />
                             <label class="form-check-label" for="@optId">@opt</label>
                         </div>
                     }
@@ -81,5 +101,12 @@
         </fieldset>
     }
 
-    <button type="submit" class="btn btn-primary">@(Model.AlreadyResponded ? "Atualizar respostas" : "Enviar respostas")</button>
+    @if (Model.IsTeacherPreview)
+    {
+        <button type="button" class="btn btn-primary" disabled>Enviar respostas (preview)</button>
+    }
+    else
+    {
+        <button type="submit" class="btn btn-primary">@(Model.AlreadyResponded ? "Atualizar respostas" : "Enviar respostas")</button>
+    }
 </form>

@@ -133,6 +133,55 @@
         </div>
     </section>
 
+    @if (Model.IsEdit)
+    {
+        <section class="soft-panel mb-3 pub-section">
+            <div class="pub-section-head d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                    <h2>Atividades (questionários)</h2>
+                    <p>Formulários ligados a esta aula. Use o preview para ver como o estudante responde.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a class="btn btn-outline-primary btn-sm"
+                       asp-controller="Forms" asp-action="Index" asp-route-lessonId="@Model.Id">
+                        Ver todas
+                    </a>
+                    <a class="btn btn-primary btn-sm"
+                       asp-controller="Forms" asp-action="Create" asp-route-lessonId="@Model.Id">
+                        Nova atividade
+                    </a>
+                </div>
+            </div>
+            @if (Model.LessonForms.Count == 0)
+            {
+                <p class="text-muted mb-0">Nenhuma atividade nesta aula ainda.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var form in Model.LessonForms)
+                    {
+                        <li class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 border-bottom">
+                            <div>
+                                <strong>@form.Title</strong>
+                                <span class="small text-muted ms-2">
+                                    @form.QuestionCount pergunta(s)
+                                    · @(form.IsPublished ? "publicada" : "rascunho")
+                                </span>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-controller="Forms" asp-action="Preview" asp-route-id="@form.Id">Preview</a>
+                                <a class="btn btn-sm btn-primary"
+                                   asp-controller="Forms" asp-action="Edit" asp-route-id="@form.Id">Construtor</a>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+
     <div class="editor-grid">
         <section class="soft-panel editor-pane">
             <div class="editor-toolbar">
