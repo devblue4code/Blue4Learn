@@ -3545,3 +3545,263 @@ html[data-theme="dark"] .markdown-body {
   color: #b02a37;
   border: 1px solid color-mix(in srgb, #dc3545 35%, var(--line));
 }
+
+/* —— Fill (aluno) —— */
+.form-fill-page {
+  max-width: 44rem;
+  margin: 0 auto 2.5rem;
+}
+
+.form-fill-header .section-lead {
+  margin-bottom: .35rem;
+}
+
+.form-fill-desc {
+  margin: .65rem 0 0;
+  color: var(--muted);
+  max-width: 38rem;
+}
+
+.form-fill-banner {
+  display: flex;
+  gap: .85rem;
+  align-items: flex-start;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.form-fill-banner i {
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--blue);
+}
+
+.form-fill-banner strong {
+  display: block;
+  margin-bottom: .15rem;
+  color: var(--blue-deep);
+}
+
+.form-fill-banner p {
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.form-fill-banner.is-score {
+  border-color: color-mix(in srgb, var(--blue) 35%, var(--line));
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
+}
+
+.form-fill-banner.is-preview {
+  border-color: color-mix(in srgb, #0d6efd 30%, var(--line));
+  background: color-mix(in srgb, #0d6efd 8%, var(--surface));
+}
+
+.form-fill-banner.is-info i {
+  color: var(--muted);
+}
+
+.form-fill-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-fill-errors:not(:empty) {
+  padding: .75rem 1rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, #dc3545 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, #dc3545 28%, var(--line));
+}
+
+.form-fill-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem 1.25rem;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--muted) 8%, transparent);
+}
+
+.form-fill-card.is-correct {
+  border-color: color-mix(in srgb, #198754 40%, var(--line));
+  background: color-mix(in srgb, #198754 6%, var(--surface));
+}
+
+.form-fill-card.is-incorrect {
+  border-color: color-mix(in srgb, #dc3545 38%, var(--line));
+  background: color-mix(in srgb, #dc3545 5%, var(--surface));
+}
+
+.form-fill-card-head {
+  display: flex;
+  gap: .85rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.form-fill-num {
+  flex: 0 0 2rem;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--blue-deep);
+  background: color-mix(in srgb, var(--blue) 12%, var(--surface));
+}
+
+.form-fill-card-title h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--blue-deep);
+  line-height: 1.35;
+}
+
+.form-fill-req {
+  color: #b02a37;
+  font-weight: 700;
+}
+
+.form-fill-hint {
+  margin: .35rem 0 0;
+  font-size: .82rem;
+  color: var(--muted);
+}
+
+.form-fill-input {
+  border-radius: 12px;
+  padding: .7rem .9rem;
+}
+
+.form-fill-options {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+
+.form-fill-option {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  margin: 0;
+  padding: .75rem .9rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--muted) 4%, var(--surface));
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.form-fill-option:hover {
+  border-color: color-mix(in srgb, var(--blue) 40%, var(--line));
+  background: color-mix(in srgb, var(--blue) 6%, var(--surface));
+}
+
+.form-fill-option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--blue) 55%, var(--line));
+  background: color-mix(in srgb, var(--blue) 10%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 25%, transparent);
+}
+
+.form-fill-option.is-correct {
+  border-color: color-mix(in srgb, #198754 45%, var(--line));
+  background: color-mix(in srgb, #198754 12%, var(--surface));
+}
+
+.form-fill-option.is-incorrect {
+  border-color: color-mix(in srgb, #dc3545 45%, var(--line));
+  background: color-mix(in srgb, #dc3545 10%, var(--surface));
+}
+
+.form-fill-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form-fill-option-mark {
+  flex: 0 0 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: .15rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--muted) 55%, var(--line));
+  background: var(--surface);
+  position: relative;
+}
+
+.form-fill-option.is-multi .form-fill-option-mark {
+  border-radius: 4px;
+}
+
+.form-fill-option:has(input:checked) .form-fill-option-mark {
+  border-color: var(--blue);
+  background: var(--blue);
+}
+
+.form-fill-option:has(input:checked) .form-fill-option-mark::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: inherit;
+  background: #fff;
+}
+
+.form-fill-option.is-multi:has(input:checked) .form-fill-option-mark::after {
+  inset: 2px;
+  background: transparent;
+  border: 2px solid #fff;
+  border-top: 0;
+  border-left: 0;
+  width: .35rem;
+  height: .65rem;
+  transform: rotate(40deg) translate(.05rem, -.08rem);
+  border-radius: 0;
+}
+
+.form-fill-option-text {
+  flex: 1;
+  color: var(--text);
+  line-height: 1.4;
+  font-size: .98rem;
+}
+
+.form-fill-key {
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+.form-fill-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: .35rem;
+  padding: 1rem 0 .25rem;
+  background: linear-gradient(to top, var(--canvas, var(--surface)) 70%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .45rem;
+}
+
+.form-fill-actions-note {
+  font-size: .85rem;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .form-fill-card {
+    padding: 1rem;
+    border-radius: 14px;
+  }
+
+  .form-fill-actions .btn-lg {
+    width: 100%;
+  }
+}

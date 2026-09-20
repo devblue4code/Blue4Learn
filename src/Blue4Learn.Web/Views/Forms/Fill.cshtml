@@ -1,166 +1,248 @@
 @model FormFillViewModel
 @{
     ViewData["Title"] = Model.IsTeacherPreview ? $"Preview · {Model.Title}" : Model.Title;
-    ViewData["TopTitle"] = "Atividades";
+    ViewData["TopTitle"] = "Questionário";
     var showResults = Model.ShowResults && !Model.IsTeacherPreview;
-}
-
-<div class="page-header">
-    <div>
-        <p class="eyebrow">@Model.LessonContext · @Model.LessonTitle</p>
-        <h1>@Model.Title</h1>
-        @if (!string.IsNullOrWhiteSpace(Model.Description))
-        {
-            <p class="section-lead">@Model.Description</p>
-        }
-        @if (Model.IsTeacherPreview)
-        {
-            <p class="small text-muted mb-0">Preview como o estudante vê — as respostas não são enviadas.</p>
-        }
-        else if (showResults && Model.ScoreGraded is int graded && graded > 0)
-        {
-            <p class="mb-0">
-                Resultado:
-                <strong>@Model.ScoreCorrect / @graded</strong> corretas
-            </p>
-        }
-        else if (Model.AlreadyResponded)
-        {
-            <p class="small text-muted mb-0">Você já enviou respostas — pode atualizar e enviar de novo.</p>
-        }
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        @if (Model.IsTeacherPreview)
-        {
-            <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.FormId">Construtor</a>
-            <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Ver aula</a>
-        }
-        <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Voltar</a>
-    </div>
-</div>
-
-@if (Model.IsTeacherPreview)
-{
-    <div class="alert alert-info soft-panel mb-3" role="status">
-        Você está no <strong>modo preview</strong>. Experimente as perguntas; o envio fica desativado.
-    </div>
-}
-
-<form asp-action="Fill" method="post" class="soft-panel" style="max-width: 720px">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="FormId" value="@Model.FormId" />
-    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-    @for (var i = 0; i < Model.Questions.Count; i++)
+    var total = Model.Questions.Count;
+    string TypeHint(FormQuestionType t) => t switch
     {
-        var q = Model.Questions[i];
-        <input type="hidden" name="Questions[@i].QuestionId" value="@q.QuestionId" />
-        <input type="hidden" name="Questions[@i].Type" value="@q.Type" />
-        <input type="hidden" name="Questions[@i].IsRequired" value="@q.IsRequired" />
-        <input type="hidden" name="Questions[@i].Prompt" value="@q.Prompt" />
+        FormQuestionType.ShortText => "Resposta curta",
+        FormQuestionType.Paragraph => "Resposta longa",
+        FormQuestionType.SingleChoice => "Escolha uma opção",
+        FormQuestionType.MultiChoice => "Pode marcar mais de uma",
+        _ => ""
+    };
+}
 
-        <fieldset class="mb-4 form-fill-question @(showResults && q.IsCorrect == true ? "is-correct" : null) @(showResults && q.IsCorrect == false ? "is-incorrect" : null)">
-            <legend class="h6 mb-2">
-                @(i + 1). @q.Prompt
-                @if (q.IsRequired)
+<div class="form-fill-page">
+    <div class="page-header form-fill-header">
+        <div>
+            <p class="eyebrow">@Model.LessonContext</p>
+            <h1>@Model.Title</h1>
+            <p class="section-lead mb-1">
+                <span class="text-muted">@Model.LessonTitle</span>
+                @if (total > 0)
                 {
-                    <span class="text-danger">*</span>
+                    <span class="form-fill-count">· @total pergunta@(total == 1 ? "" : "s")</span>
                 }
-                @if (showResults && q.IsCorrect == true)
-                {
-                    <span class="form-result-chip is-ok">Certa</span>
-                }
-                else if (showResults && q.IsCorrect == false)
-                {
-                    <span class="form-result-chip is-bad">Errada</span>
-                }
-            </legend>
-
-            @switch (q.Type)
+            </p>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
             {
-                case FormQuestionType.ShortText:
-                    <input class="form-control" name="Questions[@i].TextValue" value="@q.TextValue"
-                           maxlength="500"
-                           @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null)) />
-                    break;
-                case FormQuestionType.Paragraph:
-                    <textarea class="form-control" name="Questions[@i].TextValue" rows="4"
-                              maxlength="4000"
-                              @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null))>@q.TextValue</textarea>
-                    break;
-                case FormQuestionType.SingleChoice:
-                    @foreach (var opt in q.Options)
-                    {
-                        var optId = $"q{i}-{opt.GetHashCode()}";
-                        var selected = q.SelectedOptions.Contains(opt);
-                        var isAnswer = q.CorrectOptions.Contains(opt);
-                        var optClass = "";
-                        if (showResults && q.HasGrading)
-                        {
-                            if (isAnswer) optClass = "form-option is-correct";
-                            else if (selected) optClass = "form-option is-incorrect";
-                        }
-                        <div class="form-check @optClass">
-                            <input class="form-check-input" type="radio"
-                                   name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
-                                   @(selected ? "checked" : null)
-                                   @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null)) />
-                            <label class="form-check-label" for="@optId">@opt</label>
-                        </div>
-                    }
-                    break;
-                case FormQuestionType.MultiChoice:
-                    @foreach (var opt in q.Options)
-                    {
-                        var optId = $"q{i}-{opt.GetHashCode()}";
-                        var selected = q.SelectedOptions.Contains(opt);
-                        var isAnswer = q.CorrectOptions.Contains(opt);
-                        var optClass = "";
-                        if (showResults && q.HasGrading)
-                        {
-                            if (isAnswer) optClass = "form-option is-correct";
-                            else if (selected) optClass = "form-option is-incorrect";
-                        }
-                        <div class="form-check @optClass">
-                            <input class="form-check-input" type="checkbox"
-                                   name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
-                                   @(selected ? "checked" : null) />
-                            <label class="form-check-label" for="@optId">@opt</label>
-                        </div>
-                    }
-                    break;
+                <p class="form-fill-desc">@Model.Description</p>
             }
-
-            @if (showResults && q.HasGrading)
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            @if (Model.IsTeacherPreview)
             {
-                if (q.IsCorrect == true && !string.IsNullOrWhiteSpace(q.FeedbackCorrect))
-                {
-                    <div class="form-feedback is-ok mt-2">@q.FeedbackCorrect</div>
-                }
-                else if (q.IsCorrect == false)
-                {
-                    @if (!string.IsNullOrWhiteSpace(q.FeedbackIncorrect))
-                    {
-                        <div class="form-feedback is-bad mt-2">@q.FeedbackIncorrect</div>
-                    }
-                    @if (q.Type is FormQuestionType.ShortText or FormQuestionType.Paragraph)
-                    {
-                        <p class="small text-muted mt-2 mb-0">
-                            Gabarito:
-                            <strong>@string.Join(" · ", q.CorrectOptions)</strong>
-                        </p>
-                    }
-                }
+                <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.FormId">Construtor</a>
+                <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Ver aula</a>
             }
-        </fieldset>
-    }
+            else
+            {
+                <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@Model.LessonId">Voltar à aula</a>
+            }
+            <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Lista</a>
+        </div>
+    </div>
 
     @if (Model.IsTeacherPreview)
     {
-        <button type="button" class="btn btn-primary" disabled>Enviar respostas (preview)</button>
+        <div class="form-fill-banner is-preview" role="status">
+            <i class="bi bi-eye" aria-hidden="true"></i>
+            <div>
+                <strong>Modo preview</strong>
+                <p class="mb-0">Você vê o formulário como o estudante. O envio fica desativado.</p>
+            </div>
+        </div>
     }
-    else
+    else if (showResults && Model.ScoreGraded is int graded && graded > 0)
     {
-        <button type="submit" class="btn btn-primary">@(Model.AlreadyResponded ? "Atualizar respostas" : "Enviar respostas")</button>
+        <div class="form-fill-banner is-score" role="status">
+            <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+            <div>
+                <strong>Resultado: @Model.ScoreCorrect de @graded</strong>
+                <p class="mb-0">Revise o feedback em cada pergunta. Pode corrigir e enviar de novo.</p>
+            </div>
+        </div>
     }
-</form>
+    else if (Model.AlreadyResponded)
+    {
+        <div class="form-fill-banner is-info" role="status">
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            <div>
+                <strong>Você já respondeu</strong>
+                <p class="mb-0">Altere o que quiser e envie novamente para atualizar.</p>
+            </div>
+        </div>
+    }
+
+    <form asp-action="Fill" asp-route-id="@Model.FormId" method="post" class="form-fill-shell" id="form-fill" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="FormId" value="@Model.FormId" />
+        <div asp-validation-summary="ModelOnly" class="form-fill-errors text-danger"></div>
+
+        @for (var i = 0; i < Model.Questions.Count; i++)
+        {
+            var q = Model.Questions[i];
+            var cardState = showResults && q.IsCorrect == true ? "is-correct"
+                : showResults && q.IsCorrect == false ? "is-incorrect"
+                : "";
+            <article class="form-fill-card @cardState" data-question-index="@i">
+                <header class="form-fill-card-head">
+                    <span class="form-fill-num" aria-hidden="true">@(i + 1)</span>
+                    <div class="form-fill-card-title">
+                        <h2>
+                            @q.Prompt
+                            @if (q.IsRequired)
+                            {
+                                <span class="form-fill-req" title="Obrigatória">*</span>
+                            }
+                        </h2>
+                        <p class="form-fill-hint">
+                            @TypeHint(q.Type)
+                            @if (showResults && q.IsCorrect == true)
+                            {
+                                <span class="form-result-chip is-ok">Certa</span>
+                            }
+                            else if (showResults && q.IsCorrect == false)
+                            {
+                                <span class="form-result-chip is-bad">Errada</span>
+                            }
+                        </p>
+                    </div>
+                </header>
+
+                <input type="hidden" name="Questions[@i].QuestionId" value="@q.QuestionId" />
+                <input type="hidden" name="Questions[@i].Type" value="@q.Type" />
+                <input type="hidden" name="Questions[@i].IsRequired" value="@(q.IsRequired ? "true" : "false")" />
+                <input type="hidden" name="Questions[@i].Prompt" value="@q.Prompt" />
+
+                <div class="form-fill-card-body">
+                    @switch (q.Type)
+                    {
+                        case FormQuestionType.ShortText:
+                            <input class="form-control form-fill-input" name="Questions[@i].TextValue" value="@q.TextValue"
+                                   maxlength="500" autocomplete="off"
+                                   placeholder="Digite sua resposta"
+                                   aria-label="@q.Prompt"
+                                   @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null)) />
+                            break;
+                        case FormQuestionType.Paragraph:
+                            <textarea class="form-control form-fill-input" name="Questions[@i].TextValue" rows="5"
+                                      maxlength="4000" placeholder="Escreva com detalhes…"
+                                      aria-label="@q.Prompt"
+                                      @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null))>@q.TextValue</textarea>
+                            break;
+                        case FormQuestionType.SingleChoice:
+                            <div class="form-fill-options" role="radiogroup" aria-label="@q.Prompt">
+                                @for (var oi = 0; oi < q.Options.Count; oi++)
+                                {
+                                    var opt = q.Options[oi];
+                                    var optId = $"q{q.QuestionId:N}-o{oi}";
+                                    var selected = q.SelectedOptions.Contains(opt);
+                                    var isAnswer = q.CorrectOptions.Contains(opt);
+                                    var optClass = "";
+                                    if (showResults && q.HasGrading)
+                                    {
+                                        if (isAnswer) optClass = "is-correct";
+                                        else if (selected) optClass = "is-incorrect";
+                                    }
+                                    <label class="form-fill-option @optClass" for="@optId">
+                                        <input type="radio"
+                                               name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
+                                               @(selected ? "checked" : null)
+                                               @(Model.IsTeacherPreview ? null : (q.IsRequired && oi == 0 ? "required" : null)) />
+                                        <span class="form-fill-option-mark" aria-hidden="true"></span>
+                                        <span class="form-fill-option-text">@opt</span>
+                                    </label>
+                                }
+                            </div>
+                            break;
+                        case FormQuestionType.MultiChoice:
+                            <div class="form-fill-options" role="group" aria-label="@q.Prompt">
+                                @for (var oi = 0; oi < q.Options.Count; oi++)
+                                {
+                                    var opt = q.Options[oi];
+                                    var optId = $"q{q.QuestionId:N}-o{oi}";
+                                    var selected = q.SelectedOptions.Contains(opt);
+                                    var isAnswer = q.CorrectOptions.Contains(opt);
+                                    var optClass = "";
+                                    if (showResults && q.HasGrading)
+                                    {
+                                        if (isAnswer) optClass = "is-correct";
+                                        else if (selected) optClass = "is-incorrect";
+                                    }
+                                    <label class="form-fill-option is-multi @optClass" for="@optId">
+                                        <input type="checkbox"
+                                               name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
+                                               @(selected ? "checked" : null) />
+                                        <span class="form-fill-option-mark" aria-hidden="true"></span>
+                                        <span class="form-fill-option-text">@opt</span>
+                                    </label>
+                                }
+                            </div>
+                            break;
+                    }
+
+                    @if (showResults && q.HasGrading)
+                    {
+                        if (q.IsCorrect == true && !string.IsNullOrWhiteSpace(q.FeedbackCorrect))
+                        {
+                            <div class="form-feedback is-ok mt-3">@q.FeedbackCorrect</div>
+                        }
+                        else if (q.IsCorrect == false)
+                        {
+                            @if (!string.IsNullOrWhiteSpace(q.FeedbackIncorrect))
+                            {
+                                <div class="form-feedback is-bad mt-3">@q.FeedbackIncorrect</div>
+                            }
+                            @if (q.Type is FormQuestionType.ShortText or FormQuestionType.Paragraph)
+                            {
+                                <p class="form-fill-key mt-2 mb-0">
+                                    Gabarito: <strong>@string.Join(" · ", q.CorrectOptions)</strong>
+                                </p>
+                            }
+                        }
+                    }
+                </div>
+            </article>
+        }
+
+        <div class="form-fill-actions">
+            @if (Model.IsTeacherPreview)
+            {
+                <button type="button" class="btn btn-primary btn-lg" disabled>Enviar respostas (preview)</button>
+            }
+            else
+            {
+                <button type="submit" class="btn btn-primary btn-lg" id="form-fill-submit">
+                    @(showResults || Model.AlreadyResponded ? "Atualizar respostas" : "Enviar respostas")
+                </button>
+                <p class="form-fill-actions-note mb-0">
+                    @(showResults ? "Suas respostas anteriores serão substituídas." : "Você poderá revisar o resultado depois do envio.")
+                </p>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const form = document.getElementById('form-fill');
+            const btn = document.getElementById('form-fill-submit');
+            if (!form || !btn) return;
+
+            form.addEventListener('submit', () => {
+                btn.disabled = true;
+                btn.textContent = 'Enviando…';
+            });
+
+            const firstInvalid = form.querySelector(':invalid');
+            if (firstInvalid) {
+                firstInvalid.closest('.form-fill-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        })();
+    </script>
+}
