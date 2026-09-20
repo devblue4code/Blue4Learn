@@ -154,10 +154,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             e.Property(x => x.Title).HasMaxLength(200);
             e.Property(x => x.Description).HasMaxLength(2000);
-            e.HasIndex(x => x.CourseId);
-            e.HasOne(x => x.Course)
+            e.HasIndex(x => x.LessonId);
+            e.HasOne(x => x.Lesson)
                 .WithMany()
-                .HasForeignKey(x => x.CourseId)
+                .HasForeignKey(x => x.LessonId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

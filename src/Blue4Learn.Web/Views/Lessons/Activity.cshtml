@@ -129,8 +129,8 @@
             </details>
 
             <p class="small text-muted mb-3">
-                Questionários da disciplina (estilo Forms) ficam em
-                <a asp-controller="Forms" asp-action="Index">Atividades</a>.
+                Questionários desta aula (estilo Forms) ficam em
+                <a asp-controller="Forms" asp-action="Index" asp-route-lessonId="@Model.LessonId">Atividades</a>.
             </p>
 
             @if (!isReviewed)

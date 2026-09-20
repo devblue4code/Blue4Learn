@@ -7,6 +7,8 @@ namespace Blue4Learn.Web.ViewModels;
 public class FormListViewModel
 {
     public bool IsTeacher { get; set; }
+    public Guid? FilterLessonId { get; set; }
+    public string? FilterLessonTitle { get; set; }
     public IReadOnlyList<FormListItemViewModel> Forms { get; set; } = [];
 }
 
@@ -15,8 +17,9 @@ public class FormListItemViewModel
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string CourseTitle { get; set; } = string.Empty;
-    public Guid CourseId { get; set; }
+    public string LessonTitle { get; set; } = string.Empty;
+    public string LessonContext { get; set; } = string.Empty;
+    public Guid LessonId { get; set; }
     public bool IsPublished { get; set; }
     public int QuestionCount { get; set; }
     public int ResponseCount { get; set; }
@@ -26,8 +29,8 @@ public class FormListItemViewModel
 
 public class FormCreateViewModel
 {
-    [Required(ErrorMessage = "Escolha a disciplina.")]
-    public Guid CourseId { get; set; }
+    [Required(ErrorMessage = "Escolha a aula.")]
+    public Guid? LessonId { get; set; }
 
     [Required(ErrorMessage = "Informe o título.")]
     [StringLength(200)]
@@ -38,20 +41,21 @@ public class FormCreateViewModel
     [Display(Name = "Descrição")]
     public string Description { get; set; } = string.Empty;
 
-    public IReadOnlyList<FormCourseOptionViewModel> Courses { get; set; } = [];
+    public IReadOnlyList<FormLessonOptionViewModel> Lessons { get; set; } = [];
 }
 
-public class FormCourseOptionViewModel
+public class FormLessonOptionViewModel
 {
     public Guid Id { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 }
 
 public class FormBuilderViewModel
 {
     public Guid FormId { get; set; }
-    public Guid CourseId { get; set; }
-    public string CourseTitle { get; set; } = string.Empty;
+    public Guid LessonId { get; set; }
+    public string LessonTitle { get; set; } = string.Empty;
+    public string LessonContext { get; set; } = string.Empty;
 
     [Required]
     [StringLength(200)]
@@ -77,7 +81,6 @@ public class FormQuestionEditViewModel
     public bool IsRequired { get; set; } = true;
     public int SortOrder { get; set; }
 
-    /// <summary>One option per line for choice questions.</summary>
     [Display(Name = "Opções (uma por linha)")]
     public string OptionsText { get; set; } = "Opção 1\nOpção 2";
 
@@ -116,9 +119,11 @@ public class FormQuestionEditViewModel
 public class FormFillViewModel
 {
     public Guid FormId { get; set; }
+    public Guid LessonId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string CourseTitle { get; set; } = string.Empty;
+    public string LessonTitle { get; set; } = string.Empty;
+    public string LessonContext { get; set; } = string.Empty;
     public bool AlreadyResponded { get; set; }
     public List<FormFillQuestionViewModel> Questions { get; set; } = [];
 }
@@ -138,7 +143,8 @@ public class FormResponsesViewModel
 {
     public Guid FormId { get; set; }
     public string Title { get; set; } = string.Empty;
-    public string CourseTitle { get; set; } = string.Empty;
+    public string LessonTitle { get; set; } = string.Empty;
+    public string LessonContext { get; set; } = string.Empty;
     public int QuestionCount { get; set; }
     public IReadOnlyList<FormResponseRowViewModel> Responses { get; set; } = [];
 }
