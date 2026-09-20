@@ -65,25 +65,47 @@
             </div>
         </div>
     }
-    else if (showResults && Model.ScoreGraded is int graded && graded > 0)
+    else if (showResults)
     {
         <div class="form-fill-banner is-score" role="status">
             <i class="bi bi-clipboard-check" aria-hidden="true"></i>
             <div>
-                <strong>Resultado final: @Model.ScoreCorrect de @graded</strong>
-                <p class="mb-0">Tentativa única — não é possível responder de novo.</p>
+                @if (Model.ScoreGraded is int graded && graded > 0)
+                {
+                    <strong>Resultado: @Model.ScoreCorrect acerto(s) · @Model.ScoreIncorrect erro(s)</strong>
+                    <p class="mb-0">
+                        @graded pergunta(s) com gabarito
+                        @if (Model.ScoreBlank > 0)
+                        {
+                            <text>· @Model.ScoreBlank em branco</text>
+                        }
+                        · tentativa única
+                    </p>
+                }
+                else
+                {
+                    <strong>Questionário enviado</strong>
+                    <p class="mb-0">As perguntas ainda não têm gabarito configurado — peça à professora para marcar as respostas corretas e o feedback.</p>
+                }
             </div>
         </div>
-    }
-    else if (isLocked)
-    {
-        <div class="form-fill-banner is-info" role="status">
-            <i class="bi bi-lock" aria-hidden="true"></i>
-            <div>
-                <strong>Questionário concluído</strong>
-                <p class="mb-0">Você já usou sua única tentativa.</p>
+        @if (Model.ScoreGraded is int g && g > 0)
+        {
+            <div class="form-fill-scoreboard" aria-label="Resumo de acertos e erros">
+                <div class="form-fill-score-pill is-ok">
+                    <span>Acertos</span>
+                    <strong>@Model.ScoreCorrect</strong>
+                </div>
+                <div class="form-fill-score-pill is-bad">
+                    <span>Erros</span>
+                    <strong>@Model.ScoreIncorrect</strong>
+                </div>
+                <div class="form-fill-score-pill is-muted">
+                    <span>Total</span>
+                    <strong>@g</strong>
+                </div>
             </div>
-        </div>
+        }
     }
     else if (isTimedRun)
     {
@@ -130,13 +152,17 @@
                         <h2>@q.Prompt</h2>
                         <p class="form-fill-hint">
                             @TypeHint(q.Type)
-                            @if (showResults && q.IsCorrect == true)
+                            @if (showResults && q.HasGrading && q.IsCorrect == true)
                             {
                                 <span class="form-result-chip is-ok">Certa</span>
                             }
-                            else if (showResults && q.IsCorrect == false)
+                            else if (showResults && q.HasGrading && q.IsCorrect == false)
                             {
                                 <span class="form-result-chip is-bad">Errada</span>
+                            }
+                            else if (showResults && !q.HasGrading)
+                            {
+                                <span class="form-result-chip is-muted">Sem gabarito</span>
                             }
                         </p>
                     </div>
@@ -177,13 +203,27 @@
                                         if (isAnswer) optClass = "is-correct";
                                         else if (selected) optClass = "is-incorrect";
                                     }
+                                    else if (showResults && selected)
+                                    {
+                                        optClass = "is-selected";
+                                    }
                                     <label class="form-fill-option @optClass" for="@optId">
                                         <input type="radio"
                                                name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
                                                @(selected ? "checked" : null)
                                                @(isLocked ? "disabled" : null) />
                                         <span class="form-fill-option-mark" aria-hidden="true"></span>
-                                        <span class="form-fill-option-text">@opt</span>
+                                        <span class="form-fill-option-text">
+                                            @opt
+                                            @if (showResults && q.HasGrading && isAnswer)
+                                            {
+                                                <em class="form-fill-opt-tag is-ok">gabarito</em>
+                                            }
+                                            else if (showResults && selected && q.HasGrading && !isAnswer)
+                                            {
+                                                <em class="form-fill-opt-tag is-bad">sua escolha</em>
+                                            }
+                                        </span>
                                     </label>
                                 }
                             </div>
@@ -202,37 +242,57 @@
                                         if (isAnswer) optClass = "is-correct";
                                         else if (selected) optClass = "is-incorrect";
                                     }
+                                    else if (showResults && selected)
+                                    {
+                                        optClass = "is-selected";
+                                    }
                                     <label class="form-fill-option is-multi @optClass" for="@optId">
                                         <input type="checkbox"
                                                name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
                                                @(selected ? "checked" : null)
                                                @(isLocked ? "disabled" : null) />
                                         <span class="form-fill-option-mark" aria-hidden="true"></span>
-                                        <span class="form-fill-option-text">@opt</span>
+                                        <span class="form-fill-option-text">
+                                            @opt
+                                            @if (showResults && q.HasGrading && isAnswer)
+                                            {
+                                                <em class="form-fill-opt-tag is-ok">gabarito</em>
+                                            }
+                                        </span>
                                     </label>
                                 }
                             </div>
                             break;
                     }
 
-                    @if (showResults && q.HasGrading)
+                    @if (showResults)
                     {
-                        if (q.IsCorrect == true && !string.IsNullOrWhiteSpace(q.FeedbackCorrect))
+                        @if (q.HasGrading)
                         {
-                            <div class="form-feedback is-ok mt-3">@q.FeedbackCorrect</div>
-                        }
-                        else if (q.IsCorrect == false)
-                        {
-                            @if (!string.IsNullOrWhiteSpace(q.FeedbackIncorrect))
+                            var feedback = q.FeedbackShown;
+                            if (!string.IsNullOrWhiteSpace(feedback))
                             {
-                                <div class="form-feedback is-bad mt-3">@q.FeedbackIncorrect</div>
+                                <div class="form-feedback @(q.IsCorrect == true ? "is-ok" : "is-bad") mt-3">
+                                    <strong>@(q.IsCorrect == true ? "Feedback" : "Feedback")</strong>
+                                    <p class="mb-0">@feedback</p>
+                                </div>
                             }
-                            @if (q.Type is FormQuestionType.ShortText or FormQuestionType.Paragraph)
+                            @if (q.IsCorrect == false && q.Type is FormQuestionType.ShortText or FormQuestionType.Paragraph)
                             {
                                 <p class="form-fill-key mt-2 mb-0">
                                     Gabarito: <strong>@string.Join(" · ", q.CorrectOptions)</strong>
                                 </p>
                             }
+                            @if (!q.WasAnswered)
+                            {
+                                <p class="form-fill-key mt-2 mb-0">Você não respondeu a tempo.</p>
+                            }
+                        }
+                        else
+                        {
+                            <div class="form-feedback is-muted mt-3">
+                                Sem gabarito nesta pergunta — a professora ainda não marcou a resposta correta.
+                            </div>
                         }
                     }
                 </div>

@@ -292,13 +292,16 @@ public class FormsController : Controller
             : "[]";
         question.CorrectOptionsJson = FormQuestionEditViewModel.ToOptionsJson(correct);
         question.FeedbackCorrect = string.IsNullOrWhiteSpace(model.FeedbackCorrect)
-            ? null
+            ? "Isso mesmo!"
             : model.FeedbackCorrect.Trim();
         question.FeedbackIncorrect = string.IsNullOrWhiteSpace(model.FeedbackIncorrect)
-            ? null
+            ? "Revise a resposta e tente de novo."
             : model.FeedbackIncorrect.Trim();
         form.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Reavalia respostas já enviadas desta pergunta (gabarito novo/atualizado).
+        await RegradeQuestionAnswersAsync(question);
 
         TempData["Success"] = "Pergunta atualizada.";
         return RedirectToAction(nameof(Edit), new { id = form.Id });
@@ -511,6 +514,15 @@ public class FormsController : Controller
             .Include(r => r.Answers)
             .FirstOrDefaultAsync(r => r.FormId == id && r.UserId == user.Id);
 
+        if (existing is not null)
+        {
+            await RegradeResponseAsync(existing.Id);
+            existing = await _db.FormResponses
+                .AsNoTracking()
+                .Include(r => r.Answers)
+                .FirstOrDefaultAsync(r => r.Id == existing.Id);
+        }
+
         return View(ToFillVm(form, existing));
     }
 
@@ -722,6 +734,13 @@ public class FormsController : Controller
         {
             answers.TryGetValue(q.Id, out var answer);
             var correct = FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson);
+            var selected = FormQuestionEditViewModel.ParseOptionsJson(answer?.SelectedOptionsJson).ToList();
+            bool? isCorrect = answer?.IsCorrect;
+            if (isCorrect is null && correct.Count > 0 && answer is not null)
+            {
+                isCorrect = EvaluateStoredAnswer(q, answer, selected);
+            }
+
             return new FormFillQuestionViewModel
             {
                 QuestionId = q.Id,
@@ -731,14 +750,19 @@ public class FormsController : Controller
                 Options = FormQuestionEditViewModel.ParseOptionsJson(q.OptionsJson),
                 CorrectOptions = correct,
                 TextValue = answer?.TextValue,
-                SelectedOptions = FormQuestionEditViewModel.ParseOptionsJson(answer?.SelectedOptionsJson).ToList(),
-                IsCorrect = answer?.IsCorrect,
-                FeedbackCorrect = q.FeedbackCorrect,
-                FeedbackIncorrect = q.FeedbackIncorrect
+                SelectedOptions = selected,
+                IsCorrect = isCorrect,
+                FeedbackCorrect = string.IsNullOrWhiteSpace(q.FeedbackCorrect) ? "Isso mesmo!" : q.FeedbackCorrect,
+                FeedbackIncorrect = string.IsNullOrWhiteSpace(q.FeedbackIncorrect)
+                    ? "Revise a resposta e tente de novo."
+                    : q.FeedbackIncorrect
             };
         }).ToList();
 
-        var graded = questions.Where(q => q.HasGrading && q.IsCorrect.HasValue).ToList();
+        var graded = questions.Where(q => q.HasGrading).ToList();
+        var correctCount = graded.Count(q => q.IsCorrect == true);
+        var incorrectCount = graded.Count(q => q.IsCorrect == false);
+
         return new FormFillViewModel
         {
             FormId = form.Id,
@@ -750,9 +774,93 @@ public class FormsController : Controller
             AlreadyResponded = existing is not null,
             ShowResults = existing is not null,
             ScoreGraded = graded.Count > 0 ? graded.Count : null,
-            ScoreCorrect = graded.Count > 0 ? graded.Count(q => q.IsCorrect == true) : null,
+            ScoreCorrect = graded.Count > 0 ? correctCount : null,
+            ScoreIncorrect = graded.Count > 0 ? incorrectCount : null,
+            ScoreBlank = graded.Count(q => !q.WasAnswered),
             Questions = questions
         };
+    }
+
+    private async Task RegradeQuestionAnswersAsync(FormQuestion question)
+    {
+        var answers = await _db.FormAnswers
+            .Where(a => a.QuestionId == question.Id)
+            .ToListAsync();
+        if (answers.Count == 0) return;
+
+        foreach (var answer in answers)
+        {
+            var selected = FormQuestionEditViewModel.ParseOptionsJson(answer.SelectedOptionsJson);
+            answer.IsCorrect = EvaluateStoredAnswer(question, answer, selected);
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task RegradeResponseAsync(Guid responseId)
+    {
+        var response = await _db.FormResponses
+            .Include(r => r.Answers)
+            .Include(r => r.Form).ThenInclude(f => f.Questions)
+            .FirstOrDefaultAsync(r => r.Id == responseId);
+        if (response is null) return;
+
+        var questions = response.Form.Questions.ToDictionary(q => q.Id);
+        var changed = false;
+        foreach (var answer in response.Answers)
+        {
+            if (!questions.TryGetValue(answer.QuestionId, out var question)) continue;
+            var selected = FormQuestionEditViewModel.ParseOptionsJson(answer.SelectedOptionsJson);
+            var next = EvaluateStoredAnswer(question, answer, selected);
+            if (answer.IsCorrect != next)
+            {
+                answer.IsCorrect = next;
+                changed = true;
+            }
+        }
+
+        // Cria respostas “em branco” para perguntas com gabarito sem FormAnswer.
+        foreach (var question in response.Form.Questions)
+        {
+            if (response.Answers.Any(a => a.QuestionId == question.Id)) continue;
+            var correct = FormQuestionEditViewModel.ParseOptionsJson(question.CorrectOptionsJson);
+            if (correct.Count == 0) continue;
+            _db.FormAnswers.Add(new FormAnswer
+            {
+                ResponseId = response.Id,
+                QuestionId = question.Id,
+                IsCorrect = false
+            });
+            changed = true;
+        }
+
+        if (changed) await _db.SaveChangesAsync();
+    }
+
+    private static bool? EvaluateStoredAnswer(
+        FormQuestion question,
+        FormAnswer answer,
+        IReadOnlyList<string> selected)
+    {
+        var correct = FormQuestionEditViewModel.ParseOptionsJson(question.CorrectOptionsJson);
+        if (correct.Count == 0) return null;
+
+        if (NeedsOptions(question.Type))
+        {
+            if (selected.Count == 0) return false;
+            var selectedSet = selected.ToHashSet(StringComparer.Ordinal);
+            var correctSet = correct.ToHashSet(StringComparer.Ordinal);
+            return selectedSet.SetEquals(correctSet);
+        }
+
+        if (IsTextType(question.Type))
+        {
+            var text = answer.TextValue?.Trim() ?? string.Empty;
+            if (text.Length == 0) return false;
+            return correct.Any(c => string.Equals(c.Trim(), text, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return null;
     }
 
     private static List<string> ResolveCorrectOptions(FormQuestionEditViewModel model)
