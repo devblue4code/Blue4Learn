@@ -71,6 +71,8 @@ public class FormBuilderViewModel
 
 public class FormQuestionEditViewModel
 {
+    public static readonly string[] ChoiceLetters = ["A", "B", "C", "D"];
+
     public Guid Id { get; set; }
 
     [Required(ErrorMessage = "Informe o enunciado da pergunta.")]
@@ -81,11 +83,25 @@ public class FormQuestionEditViewModel
     public bool IsRequired { get; set; } = true;
     public int SortOrder { get; set; }
 
-    [Display(Name = "Opções (uma por linha)")]
-    public string OptionsText { get; set; } = "Opção 1\nOpção 2";
+    /// <summary>Textos das alternativas A–D (índice 0 = A).</summary>
+    public List<string> OptionSlots { get; set; } = ["", "", "", ""];
 
-    /// <summary>Correct option labels (one for single choice; one+ for multi).</summary>
+    [Display(Name = "Opções (uma por linha)")]
+    public string OptionsText
+    {
+        get => string.Join('\n', OptionSlots.Where(o => !string.IsNullOrWhiteSpace(o)));
+        set => OptionSlots = NormalizeSlots(ParseOptions(value));
+    }
+
+    /// <summary>Correct option labels (full text).</summary>
     public List<string> CorrectOptions { get; set; } = [];
+
+    /// <summary>Letter A–D for single-choice gabarito.</summary>
+    [Display(Name = "Resposta correta")]
+    public string? CorrectLetter { get; set; }
+
+    /// <summary>Letters A–D for multi-choice gabarito.</summary>
+    public List<string> CorrectLetters { get; set; } = [];
 
     [Display(Name = "Resposta correta (texto exato de uma opção)")]
     public string? CorrectOptionSingle { get; set; }
@@ -102,19 +118,31 @@ public class FormQuestionEditViewModel
     [Display(Name = "Feedback se errar")]
     public string? FeedbackIncorrect { get; set; }
 
-    public IReadOnlyList<string> Options => ParseOptions(OptionsText);
+    public IReadOnlyList<string> Options =>
+        OptionSlots.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).ToList();
+
+    public static List<string> NormalizeSlots(IEnumerable<string>? options)
+    {
+        var list = (options ?? [])
+            .Where(o => !string.IsNullOrWhiteSpace(o))
+            .Select(o => o.Trim())
+            .Take(4)
+            .ToList();
+        while (list.Count < 4) list.Add(string.Empty);
+        return list;
+    }
 
     public static string OptionsToText(string? optionsJson)
     {
         var list = ParseOptionsJson(optionsJson);
-        return list.Count == 0 ? "Opção 1\nOpção 2" : string.Join('\n', list);
+        return list.Count == 0 ? "" : string.Join('\n', list);
     }
 
     public static IReadOnlyList<string> ParseOptions(string? text) =>
         (text ?? string.Empty)
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Take(12)
+            .Take(4)
             .ToList();
 
     public static IReadOnlyList<string> ParseOptionsJson(string? json)
@@ -131,7 +159,33 @@ public class FormQuestionEditViewModel
     }
 
     public static string ToOptionsJson(IEnumerable<string> options) =>
-        JsonSerializer.Serialize(options.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).ToList());
+        JsonSerializer.Serialize(options.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).Take(4).ToList());
+
+    public static string? LetterForOption(IReadOnlyList<string> options, string? optionText)
+    {
+        if (string.IsNullOrWhiteSpace(optionText) || options.Count == 0) return null;
+        for (var i = 0; i < options.Count && i < 4; i++)
+        {
+            if (string.Equals(options[i], optionText, StringComparison.Ordinal))
+            {
+                return ChoiceLetters[i];
+            }
+        }
+
+        // Already a letter?
+        var letter = optionText.Trim().ToUpperInvariant();
+        if (ChoiceLetters.Contains(letter)) return letter;
+        return null;
+    }
+
+    public static string? OptionForLetter(IReadOnlyList<string> options, string? letter)
+    {
+        if (string.IsNullOrWhiteSpace(letter)) return null;
+        var idx = Array.IndexOf(ChoiceLetters, letter.Trim().ToUpperInvariant());
+        if (idx < 0 || idx >= options.Count) return null;
+        var text = options[idx];
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
 }
 
 public class FormFillViewModel

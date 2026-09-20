@@ -194,6 +194,9 @@
                                 @for (var oi = 0; oi < q.Options.Count; oi++)
                                 {
                                     var opt = q.Options[oi];
+                                    var letter = oi < FormQuestionEditViewModel.ChoiceLetters.Length
+                                        ? FormQuestionEditViewModel.ChoiceLetters[oi]
+                                        : (oi + 1).ToString();
                                     var optId = $"q{q.QuestionId:N}-o{oi}";
                                     var selected = q.SelectedOptions.Contains(opt);
                                     var isAnswer = q.CorrectOptions.Contains(opt);
@@ -214,7 +217,7 @@
                                                @(isLocked ? "disabled" : null) />
                                         <span class="form-fill-option-mark" aria-hidden="true"></span>
                                         <span class="form-fill-option-text">
-                                            @opt
+                                            <strong class="form-fill-letter">@letter.</strong> @opt
                                             @if (showResults && q.HasGrading && isAnswer)
                                             {
                                                 <em class="form-fill-opt-tag is-ok">gabarito</em>
@@ -233,6 +236,9 @@
                                 @for (var oi = 0; oi < q.Options.Count; oi++)
                                 {
                                     var opt = q.Options[oi];
+                                    var letter = oi < FormQuestionEditViewModel.ChoiceLetters.Length
+                                        ? FormQuestionEditViewModel.ChoiceLetters[oi]
+                                        : (oi + 1).ToString();
                                     var optId = $"q{q.QuestionId:N}-o{oi}";
                                     var selected = q.SelectedOptions.Contains(opt);
                                     var isAnswer = q.CorrectOptions.Contains(opt);
@@ -253,7 +259,7 @@
                                                @(isLocked ? "disabled" : null) />
                                         <span class="form-fill-option-mark" aria-hidden="true"></span>
                                         <span class="form-fill-option-text">
-                                            @opt
+                                            <strong class="form-fill-letter">@letter.</strong> @opt
                                             @if (showResults && q.HasGrading && isAnswer)
                                             {
                                                 <em class="form-fill-opt-tag is-ok">gabarito</em>

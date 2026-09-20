@@ -133,34 +133,38 @@ else
                 @if (q.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice)
                 {
                     <div class="mb-3">
-                        <label class="form-label" for="opts-@q.Id">Opções (uma por linha)</label>
-                        <textarea id="opts-@q.Id" name="OptionsText" class="form-control" rows="4">@q.OptionsText</textarea>
+                        <label class="form-label d-block">Alternativas (A–D)</label>
+                        <p class="small text-muted mb-2">Preencha até 4 opções. O gabarito é escolhido pela letra.</p>
+                        @for (var s = 0; s < 4; s++)
+                        {
+                            var letter = FormQuestionEditViewModel.ChoiceLetters[s];
+                            var slotValue = q.OptionSlots.Count > s ? q.OptionSlots[s] : "";
+                            <div class="input-group mb-2">
+                                <span class="input-group-text fw-semibold" style="min-width:2.75rem">@letter</span>
+                                <input class="form-control" name="OptionSlots[@s]" value="@slotValue"
+                                       maxlength="500" placeholder="Texto da alternativa @letter" />
+                            </div>
+                        }
                     </div>
                     @if (q.Type == FormQuestionType.SingleChoice)
                     {
                         <div class="mb-3">
-                            <label class="form-label d-block">Resposta correta (gabarito)</label>
-                            @if (!q.Options.Any())
-                            {
-                                <p class="small text-muted mb-0">Salve as opções primeiro para marcar a correta.</p>
-                            }
-                            else
-                            {
-                                @foreach (var opt in q.Options)
+                            <label class="form-label d-block">Resposta correta</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                @foreach (var letter in FormQuestionEditViewModel.ChoiceLetters)
                                 {
-                                    var rid = $"correct-{q.Id}-{opt.GetHashCode()}";
+                                    var rid = $"correct-{q.Id}-{letter}";
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="CorrectOptionSingle"
-                                               value="@opt" id="@rid"
-                                               @(string.Equals(q.CorrectOptionSingle, opt, StringComparison.Ordinal) ? "checked" : null)
-                                               required />
-                                        <label class="form-check-label" for="@rid">@opt</label>
+                                        <input class="form-check-input" type="radio" name="CorrectLetter"
+                                               value="@letter" id="@rid"
+                                               @(string.Equals(q.CorrectLetter, letter, StringComparison.OrdinalIgnoreCase) ? "checked" : null) />
+                                        <label class="form-check-label fw-semibold" for="@rid">@letter</label>
                                     </div>
                                 }
-                            }
-                            @if (q.CorrectOptions.Count == 0)
+                            </div>
+                            @if (string.IsNullOrWhiteSpace(q.CorrectLetter))
                             {
-                                <p class="small text-danger mb-0 mt-1">Sem gabarito — o aluno não verá acerto/erro nesta pergunta.</p>
+                                <p class="small text-danger mb-0 mt-1">Escolha A, B, C ou D.</p>
                             }
                         </div>
                     }
@@ -168,18 +172,20 @@ else
                     {
                         <div class="mb-3">
                             <label class="form-label d-block">Respostas corretas</label>
-                            @foreach (var opt in q.Options)
+                            <div class="d-flex flex-wrap gap-3">
+                                @foreach (var letter in FormQuestionEditViewModel.ChoiceLetters)
+                                {
+                                    var cid = $"c-{q.Id}-{letter}";
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="CorrectLetters" value="@letter" id="@cid"
+                                               @(q.CorrectLetters.Contains(letter) ? "checked" : null) />
+                                        <label class="form-check-label fw-semibold" for="@cid">@letter</label>
+                                    </div>
+                                }
+                            </div>
+                            @if (q.CorrectLetters.Count == 0)
                             {
-                                var cid = $"c-{q.Id}-{opt.GetHashCode()}";
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="CorrectOptions" value="@opt" id="@cid"
-                                           @(q.CorrectOptions.Contains(opt) ? "checked" : null) />
-                                    <label class="form-check-label" for="@cid">@opt</label>
-                                </div>
-                            }
-                            @if (q.CorrectOptions.Count == 0)
-                            {
-                                <p class="small text-danger mb-0 mt-1">Sem gabarito — marque ao menos uma opção correta.</p>
+                                <p class="small text-danger mb-0 mt-1">Marque ao menos uma letra correta.</p>
                             }
                         </div>
                     }

@@ -215,11 +215,9 @@ public class FormsController : Controller
             IsRequired = true,
             SortOrder = sort,
             OptionsJson = NeedsOptions(type)
-                ? FormQuestionEditViewModel.ToOptionsJson(["Opção 1", "Opção 2", "Opção 3"])
+                ? FormQuestionEditViewModel.ToOptionsJson(["", "", "", ""])
                 : "[]",
-            CorrectOptionsJson = NeedsOptions(type)
-                ? FormQuestionEditViewModel.ToOptionsJson(["Opção 1"])
-                : "[]",
+            CorrectOptionsJson = "[]",
             FeedbackCorrect = "Isso mesmo!",
             FeedbackIncorrect = "Revise a resposta e tente de novo."
         };
@@ -252,10 +250,22 @@ public class FormsController : Controller
             return RedirectToAction(nameof(Edit), new { id = form.Id });
         }
 
-        if (NeedsOptions(model.Type) && model.Options.Count < 2)
+        if (NeedsOptions(model.Type))
         {
-            TempData["Error"] = "Perguntas de escolha precisam de pelo menos 2 opções.";
-            return RedirectToAction(nameof(Edit), new { id = form.Id });
+            // Garante 4 slots a partir do form (OptionSlots[0..3]).
+            model.OptionSlots = FormQuestionEditViewModel.NormalizeSlots(model.OptionSlots);
+            var filled = model.Options;
+            if (filled.Count < 2)
+            {
+                TempData["Error"] = "Preencha pelo menos as alternativas A e B.";
+                return RedirectToAction(nameof(Edit), new { id = form.Id });
+            }
+
+            if (filled.Count > 4)
+            {
+                TempData["Error"] = "Use no máximo 4 alternativas (A, B, C e D).";
+                return RedirectToAction(nameof(Edit), new { id = form.Id });
+            }
         }
 
         var correct = ResolveCorrectOptions(model);
@@ -263,13 +273,7 @@ public class FormsController : Controller
         {
             if (correct.Count == 0)
             {
-                TempData["Error"] = "Marque ao menos uma resposta correta.";
-                return RedirectToAction(nameof(Edit), new { id = form.Id });
-            }
-
-            if (correct.Any(c => !model.Options.Contains(c, StringComparer.Ordinal)))
-            {
-                TempData["Error"] = "A resposta correta precisa coincidir com o texto de uma das opções.";
+                TempData["Error"] = "Marque a resposta correta (A, B, C ou D).";
                 return RedirectToAction(nameof(Edit), new { id = form.Id });
             }
 
@@ -711,19 +715,34 @@ public class FormsController : Controller
         ResponseCount = form.Responses.Count,
         Questions = form.Questions
             .OrderBy(q => q.SortOrder)
-            .Select(q => new FormQuestionEditViewModel
+            .Select(q =>
             {
-                Id = q.Id,
-                Prompt = q.Prompt,
-                Type = q.Type,
-                IsRequired = q.IsRequired,
-                SortOrder = q.SortOrder,
-                OptionsText = FormQuestionEditViewModel.OptionsToText(q.OptionsJson),
-                CorrectOptions = FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson).ToList(),
-                CorrectOptionSingle = FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson).FirstOrDefault(),
-                CorrectAnswerText = string.Join('\n', FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson)),
-                FeedbackCorrect = q.FeedbackCorrect,
-                FeedbackIncorrect = q.FeedbackIncorrect
+                var options = FormQuestionEditViewModel.ParseOptionsJson(q.OptionsJson);
+                var correct = FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson);
+                var slots = FormQuestionEditViewModel.NormalizeSlots(options);
+                var correctLetter = FormQuestionEditViewModel.LetterForOption(options.ToList(), correct.FirstOrDefault());
+                var correctLetters = correct
+                    .Select(c => FormQuestionEditViewModel.LetterForOption(options.ToList(), c))
+                    .Where(l => l is not null)
+                    .Cast<string>()
+                    .ToList();
+
+                return new FormQuestionEditViewModel
+                {
+                    Id = q.Id,
+                    Prompt = q.Prompt,
+                    Type = q.Type,
+                    IsRequired = q.IsRequired,
+                    SortOrder = q.SortOrder,
+                    OptionSlots = slots,
+                    CorrectOptions = correct.ToList(),
+                    CorrectLetter = correctLetter,
+                    CorrectLetters = correctLetters,
+                    CorrectOptionSingle = correct.FirstOrDefault(),
+                    CorrectAnswerText = string.Join('\n', correct),
+                    FeedbackCorrect = q.FeedbackCorrect,
+                    FeedbackIncorrect = q.FeedbackIncorrect
+                };
             }).ToList()
     };
 
@@ -865,17 +884,36 @@ public class FormsController : Controller
 
     private static List<string> ResolveCorrectOptions(FormQuestionEditViewModel model)
     {
+        var options = model.Options.ToList();
+
         if (model.Type == FormQuestionType.SingleChoice)
         {
-            return string.IsNullOrWhiteSpace(model.CorrectOptionSingle)
-                ? []
-                : [model.CorrectOptionSingle.Trim()];
+            var letter = model.CorrectLetter ?? model.CorrectOptionSingle;
+            var byLetter = FormQuestionEditViewModel.OptionForLetter(options, letter);
+            if (!string.IsNullOrWhiteSpace(byLetter)) return [byLetter];
+
+            // Compat: valor antigo com texto completo da opção
+            if (!string.IsNullOrWhiteSpace(model.CorrectOptionSingle)
+                && options.Contains(model.CorrectOptionSingle.Trim(), StringComparer.Ordinal))
+            {
+                return [model.CorrectOptionSingle.Trim()];
+            }
+
+            return [];
         }
 
         if (model.Type == FormQuestionType.MultiChoice)
         {
+            var fromLetters = (model.CorrectLetters ?? [])
+                .Select(l => FormQuestionEditViewModel.OptionForLetter(options, l))
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t!)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            if (fromLetters.Count > 0) return fromLetters;
+
             return (model.CorrectOptions ?? [])
-                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Where(c => !string.IsNullOrWhiteSpace(c) && options.Contains(c.Trim(), StringComparer.Ordinal))
                 .Select(c => c.Trim())
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
