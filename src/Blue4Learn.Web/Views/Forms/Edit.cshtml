@@ -1,0 +1,171 @@
+@model FormBuilderViewModel
+@{
+    ViewData["Title"] = $"Construtor · {Model.Title}";
+    ViewData["TopTitle"] = "Atividades";
+    string TypeLabel(FormQuestionType t) => t switch
+    {
+        FormQuestionType.ShortText => "Texto curto",
+        FormQuestionType.Paragraph => "Parágrafo",
+        FormQuestionType.SingleChoice => "Múltipla escolha",
+        FormQuestionType.MultiChoice => "Caixas de seleção",
+        _ => t.ToString()
+    };
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.CourseTitle · construtor</p>
+        <h1>@Model.Title</h1>
+        <p class="section-lead">
+            Monte as perguntas como no Forms. Tipos: texto curto, parágrafo, múltipla escolha e caixas de seleção.
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary" asp-action="Index">Lista</a>
+        <a class="btn btn-outline-primary" asp-action="Responses" asp-route-id="@Model.FormId">Respostas (@Model.ResponseCount)</a>
+        <form asp-action="TogglePublish" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.FormId" />
+            <button type="submit" class="btn @(Model.IsPublished ? "btn-outline-primary" : "btn-primary")">
+                @(Model.IsPublished ? "Despublicar" : "Publicar")
+            </button>
+        </form>
+    </div>
+</div>
+
+<form asp-action="SaveMeta" method="post" class="soft-panel mb-3">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="FormId" />
+    <input type="hidden" asp-for="CourseId" />
+    <div class="row g-3">
+        <div class="col-md-8">
+            <label asp-for="Title" class="form-label">Título</label>
+            <input asp-for="Title" class="form-control" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <span class="prog-chip @(Model.IsPublished ? null : "is-muted")">
+                @(Model.IsPublished ? "Publicada" : "Rascunho")
+            </span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Description" class="form-label">Descrição</label>
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-outline-primary mt-3">Salvar título e descrição</button>
+</form>
+
+<section class="dash-section-head mb-3">
+    <div>
+        <h2>Perguntas</h2>
+        <p>Adicione, edite e reordene. Salve cada pergunta após alterar.</p>
+    </div>
+</section>
+
+<div class="soft-panel mb-3">
+    <p class="mb-2 fw-semibold">Adicionar pergunta</p>
+    <div class="d-flex gap-2 flex-wrap">
+        @foreach (FormQuestionType type in Enum.GetValues<FormQuestionType>())
+        {
+            <form asp-action="AddQuestion" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="formId" value="@Model.FormId" />
+                <input type="hidden" name="type" value="@type" />
+                <button type="submit" class="btn btn-sm btn-outline-primary">+ @TypeLabel(type)</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (!Model.Questions.Any())
+{
+    <div class="soft-panel dash-empty">
+        <h3>Nenhuma pergunta</h3>
+        <p class="mb-0 text-muted">Use os botões acima para começar o formulário.</p>
+    </div>
+}
+else
+{
+    var i = 0;
+    foreach (var q in Model.Questions)
+    {
+        i++;
+        <article class="soft-panel mb-3 form-builder-card">
+            <form asp-action="SaveQuestion" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="formId" value="@Model.FormId" />
+                <input type="hidden" name="Id" value="@q.Id" />
+                <input type="hidden" name="SortOrder" value="@q.SortOrder" />
+
+                <p class="fw-semibold mb-3">Pergunta @i · @TypeLabel(q.Type)</p>
+
+                <div class="mb-3">
+                    <label class="form-label" for="prompt-@q.Id">Enunciado</label>
+                    <input id="prompt-@q.Id" name="Prompt" class="form-control" value="@q.Prompt" required />
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="type-@q.Id">Tipo</label>
+                        <select id="type-@q.Id" name="Type" class="form-select">
+                            @foreach (FormQuestionType type in Enum.GetValues<FormQuestionType>())
+                            {
+                                if (q.Type == type)
+                                {
+                                    <option value="@type" selected>@TypeLabel(type)</option>
+                                }
+                                else
+                                {
+                                    <option value="@type">@TypeLabel(type)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-check">
+                            <input type="hidden" name="IsRequired" value="false" />
+                            <input class="form-check-input" type="checkbox" name="IsRequired" value="true" id="req-@q.Id"
+                                   @(q.IsRequired ? "checked" : null) />
+                            <label class="form-check-label" for="req-@q.Id">Obrigatória</label>
+                        </div>
+                    </div>
+                </div>
+                @if (q.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice)
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="opts-@q.Id">Opções (uma por linha)</label>
+                        <textarea id="opts-@q.Id" name="OptionsText" class="form-control" rows="4">@q.OptionsText</textarea>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" name="OptionsText" value="@q.OptionsText" />
+                }
+
+                <button type="submit" class="btn btn-primary btn-sm">Salvar pergunta</button>
+            </form>
+            <div class="d-flex gap-2 flex-wrap mt-2">
+                <form asp-action="MoveQuestion" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="formId" value="@Model.FormId" />
+                    <input type="hidden" name="questionId" value="@q.Id" />
+                    <input type="hidden" name="direction" value="up" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary">↑ Subir</button>
+                </form>
+                <form asp-action="MoveQuestion" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="formId" value="@Model.FormId" />
+                    <input type="hidden" name="questionId" value="@q.Id" />
+                    <input type="hidden" name="direction" value="down" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary">↓ Descer</button>
+                </form>
+                <form asp-action="DeleteQuestion" method="post"
+                      onsubmit="return confirm('Remover esta pergunta?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="formId" value="@Model.FormId" />
+                    <input type="hidden" name="questionId" value="@q.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                </form>
+            </div>
+        </article>
+    }
+}

@@ -1,0 +1,83 @@
+@model FormListViewModel
+@{
+    ViewData["Title"] = "Atividades";
+    ViewData["TopTitle"] = "Atividades";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@(Model.IsTeacher ? "Construção" : "Participação")</p>
+        <h1>Atividades</h1>
+        <p class="section-lead">
+            @(Model.IsTeacher
+                ? "Crie formulários por disciplina — perguntas no estilo Forms para a turma responder."
+                : "Responda às atividades publicadas nas suas disciplinas.")
+        </p>
+    </div>
+    @if (Model.IsTeacher)
+    {
+        <a class="btn btn-primary" asp-action="Create">Nova atividade</a>
+    }
+</div>
+
+@if (!Model.Forms.Any())
+{
+    <div class="soft-panel dash-empty">
+        <h3>@(Model.IsTeacher ? "Nenhuma atividade ainda" : "Nada publicado no momento")</h3>
+        <p class="mb-0 text-muted">
+            @(Model.IsTeacher
+                ? "Crie a primeira e monte as perguntas no construtor."
+                : "Quando a professora publicar, as atividades aparecem aqui.")
+        </p>
+        @if (Model.IsTeacher)
+        {
+            <a class="btn btn-primary mt-3" asp-action="Create">Criar atividade</a>
+        }
+    </div>
+}
+else
+{
+    <div class="components-grid">
+        @foreach (var form in Model.Forms)
+        {
+            <article class="soft-panel">
+                <div class="d-flex justify-content-between gap-2 flex-wrap align-items-start mb-2">
+                    <span class="prog-chip @(form.IsPublished ? null : "is-muted")">
+                        @(form.IsPublished ? "Publicada" : "Rascunho")
+                    </span>
+                    <span class="small text-muted">@form.CourseTitle</span>
+                </div>
+                <h2 class="h5">@form.Title</h2>
+                @if (!string.IsNullOrWhiteSpace(form.Description))
+                {
+                    <p class="text-muted">@form.Description</p>
+                }
+                <p class="small text-muted mb-3">
+                    @form.QuestionCount pergunta(s)
+                    @if (Model.IsTeacher)
+                    {
+                        <text>· @form.ResponseCount resposta(s)</text>
+                    }
+                    else if (form.AlreadyResponded)
+                    {
+                        <text>· você já respondeu</text>
+                    }
+                </p>
+                @if (Model.IsTeacher)
+                {
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-id="@form.Id">Construtor</a>
+                        <a class="btn btn-outline-primary btn-sm" asp-action="Responses" asp-route-id="@form.Id">Respostas</a>
+                    </div>
+                }
+                else
+                {
+                    <a class="btn @(form.AlreadyResponded ? "btn-outline-primary" : "btn-primary")"
+                       asp-action="Fill" asp-route-id="@form.Id">
+                        @(form.AlreadyResponded ? "Revisar respostas" : "Responder")
+                    </a>
+                }
+            </article>
+        }
+    </div>
+}

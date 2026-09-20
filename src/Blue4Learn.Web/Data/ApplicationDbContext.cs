@@ -29,6 +29,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Quiz> Quizzes => Set<Quiz>();
     public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
     public DbSet<QuizAttempt> QuizAttempts => Set<QuizAttempt>();
+    public DbSet<CourseForm> CourseForms => Set<CourseForm>();
+    public DbSet<FormQuestion> FormQuestions => Set<FormQuestion>();
+    public DbSet<FormResponse> FormResponses => Set<FormResponse>();
+    public DbSet<FormAnswer> FormAnswers => Set<FormAnswer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -144,6 +148,56 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<QuizAttempt>(e =>
         {
             e.HasIndex(x => new { x.QuizId, x.UserId });
+        });
+
+        builder.Entity<CourseForm>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.HasIndex(x => x.CourseId);
+            e.HasOne(x => x.Course)
+                .WithMany()
+                .HasForeignKey(x => x.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<FormQuestion>(e =>
+        {
+            e.Property(x => x.Prompt).HasMaxLength(1000);
+            e.Property(x => x.OptionsJson).HasMaxLength(4000);
+            e.HasIndex(x => new { x.FormId, x.SortOrder });
+            e.HasOne(x => x.Form)
+                .WithMany(x => x.Questions)
+                .HasForeignKey(x => x.FormId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<FormResponse>(e =>
+        {
+            e.HasIndex(x => new { x.FormId, x.UserId }).IsUnique();
+            e.HasOne(x => x.Form)
+                .WithMany(x => x.Responses)
+                .HasForeignKey(x => x.FormId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<FormAnswer>(e =>
+        {
+            e.HasIndex(x => new { x.ResponseId, x.QuestionId }).IsUnique();
+            e.Property(x => x.TextValue).HasMaxLength(4000);
+            e.Property(x => x.SelectedOptionsJson).HasMaxLength(2000);
+            e.HasOne(x => x.Response)
+                .WithMany(x => x.Answers)
+                .HasForeignKey(x => x.ResponseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Question)
+                .WithMany()
+                .HasForeignKey(x => x.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<ApplicationUser>(e =>

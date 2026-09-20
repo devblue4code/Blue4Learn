@@ -28,6 +28,21 @@ public enum QuestionStatus
     Resolved = 1
 }
 
+public enum FormQuestionType
+{
+    [Display(Name = "Texto curto")]
+    ShortText = 0,
+
+    [Display(Name = "Parágrafo")]
+    Paragraph = 1,
+
+    [Display(Name = "Múltipla escolha")]
+    SingleChoice = 2,
+
+    [Display(Name = "Caixas de seleção")]
+    MultiChoice = 3
+}
+
 public static class AppRoles
 {
     public const string Student = "Estudante";

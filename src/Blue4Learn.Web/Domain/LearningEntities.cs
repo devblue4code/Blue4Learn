@@ -218,3 +218,55 @@ public class QuizAttempt
     public int MaxScore { get; set; }
     public DateTime SubmittedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>Formulário de atividade por disciplina (estilo Forms).</summary>
+public class CourseForm
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid CourseId { get; set; }
+    public Course Course { get; set; } = null!;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsPublished { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+    public ICollection<FormQuestion> Questions { get; set; } = [];
+    public ICollection<FormResponse> Responses { get; set; } = [];
+}
+
+public class FormQuestion
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FormId { get; set; }
+    public CourseForm Form { get; set; } = null!;
+    public string Prompt { get; set; } = string.Empty;
+    public FormQuestionType Type { get; set; } = FormQuestionType.ShortText;
+    public bool IsRequired { get; set; } = true;
+    public int SortOrder { get; set; }
+    /// <summary>JSON array of option labels for SingleChoice / MultiChoice.</summary>
+    public string OptionsJson { get; set; } = "[]";
+}
+
+public class FormResponse
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FormId { get; set; }
+    public CourseForm Form { get; set; } = null!;
+    public string UserId { get; set; } = string.Empty;
+    public ApplicationUser User { get; set; } = null!;
+    public DateTime SubmittedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+    public ICollection<FormAnswer> Answers { get; set; } = [];
+}
+
+public class FormAnswer
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ResponseId { get; set; }
+    public FormResponse Response { get; set; } = null!;
+    public Guid QuestionId { get; set; }
+    public FormQuestion Question { get; set; } = null!;
+    public string? TextValue { get; set; }
+    /// <summary>JSON array of selected option labels.</summary>
+    public string? SelectedOptionsJson { get; set; }
+}

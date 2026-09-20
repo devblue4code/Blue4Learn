@@ -103,7 +103,8 @@ public class ContentController : Controller
 
                        > **Dica:** use o preview ao lado para validar a leitura.
                        """,
-            ActivityPrompt = "Descreva o problema, a solução e anexe o link do repositório.",
+            ActivityPrompt = "## Entrega via GitHub\n\n1. Crie (ou atualize) o repositório da prática.\n2. Informe a URL do repositório abaixo.\n3. Se houver PR, cole o link (opcional).",
+            RequiresGitHubDelivery = true,
             Status = ContentStatus.Draft
         });
 
@@ -140,7 +141,7 @@ public class ContentController : Controller
             Markdown = lesson.ContentDocument?.Markdown ?? string.Empty,
             ConceptsText = string.Join(Environment.NewLine, lesson.Concepts.Select(c => c.Name)),
             ActivityPrompt = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.Prompt,
-            RequiresGitHubDelivery = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.RequiresGitHubDelivery ?? false,
+            RequiresGitHubDelivery = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.RequiresGitHubDelivery ?? true,
             PreviewHtml = _markdown.ToSafeHtml(lesson.ContentDocument?.Markdown)
         });
 
