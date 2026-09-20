@@ -21,6 +21,7 @@
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary" asp-action="Preview" asp-route-id="@Model.FormId">Preview como estudante</a>
         <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Lista da aula</a>
         <a class="btn btn-outline-primary" asp-action="Responses" asp-route-id="@Model.FormId">Respostas (@Model.ResponseCount)</a>
         <form asp-action="TogglePublish" method="post" class="d-inline">

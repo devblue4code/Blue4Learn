@@ -75,6 +75,15 @@ public class LessonEditorViewModel
     public string? ActivityPreviewHtml { get; set; }
     public bool IsEdit => Id.HasValue;
     public bool AiEnabled { get; set; } = true;
+    public IReadOnlyList<LessonFormSummaryViewModel> LessonForms { get; set; } = [];
+}
+
+public class LessonFormSummaryViewModel
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public bool IsPublished { get; set; }
+    public int QuestionCount { get; set; }
 }
 
 public class ModuleOptionViewModel
