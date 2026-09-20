@@ -165,6 +165,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             e.Property(x => x.Prompt).HasMaxLength(1000);
             e.Property(x => x.OptionsJson).HasMaxLength(4000);
+            e.Property(x => x.CorrectOptionsJson).HasMaxLength(2000);
+            e.Property(x => x.FeedbackCorrect).HasMaxLength(1000);
+            e.Property(x => x.FeedbackIncorrect).HasMaxLength(1000);
             e.HasIndex(x => new { x.FormId, x.SortOrder });
             e.HasOne(x => x.Form)
                 .WithMany(x => x.Questions)
