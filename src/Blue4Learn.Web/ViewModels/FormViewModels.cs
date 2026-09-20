@@ -145,6 +145,9 @@ public class FormFillViewModel
     public bool AlreadyResponded { get; set; }
     public bool IsTeacherPreview { get; set; }
     public bool ShowResults { get; set; }
+    /// <summary>Após enviar, o aluno só vê o resultado (sem nova tentativa).</summary>
+    public bool IsLocked => AlreadyResponded && !IsTeacherPreview;
+    public int SecondsPerQuestion { get; set; } = 40;
     public int? ScoreCorrect { get; set; }
     public int? ScoreGraded { get; set; }
     public List<FormFillQuestionViewModel> Questions { get; set; } = [];

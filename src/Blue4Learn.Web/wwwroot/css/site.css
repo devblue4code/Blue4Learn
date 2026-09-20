@@ -3783,7 +3783,7 @@ html[data-theme="dark"] .markdown-body {
   z-index: 2;
   margin-top: .35rem;
   padding: 1rem 0 .25rem;
-  background: linear-gradient(to top, var(--canvas, var(--surface)) 70%, transparent);
+  background: linear-gradient(to top, var(--surface-muted) 55%, transparent);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -3793,6 +3793,53 @@ html[data-theme="dark"] .markdown-body {
 .form-fill-actions-note {
   font-size: .85rem;
   color: var(--muted);
+}
+
+.form-fill-card.is-hidden-step {
+  display: none;
+}
+
+.form-fill-timer {
+  margin-bottom: 1rem;
+  padding: .85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.form-fill-timer-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: .55rem;
+  font-size: .92rem;
+  color: var(--muted);
+}
+
+.form-fill-timer-meta strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15rem;
+  color: var(--blue-deep);
+}
+
+.form-fill-timer-track {
+  height: .45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 16%, var(--surface));
+  overflow: hidden;
+}
+
+.form-fill-timer-bar {
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  transition: width .2s linear, background .2s ease;
+}
+
+.form-fill-timer-bar.is-urgent {
+  background: #dc3545;
 }
 
 @media (max-width: 640px) {
