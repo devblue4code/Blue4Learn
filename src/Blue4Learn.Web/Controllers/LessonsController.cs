@@ -73,8 +73,9 @@ public class LessonsController : Controller
     public Task<IActionResult> Activity(Guid id) =>
         LessonPageAsync(id, "activity", "Activity");
 
-    public Task<IActionResult> Evidence(Guid id) =>
-        LessonPageAsync(id, "evidence", "Evidence");
+    /// <summary>Compat: evidências foram unificadas na aba Entrega.</summary>
+    public IActionResult Evidence(Guid id) =>
+        RedirectToAction(nameof(Activity), new { id });
 
     private async Task<IActionResult> LessonPageAsync(Guid id, string section, string viewName)
     {
@@ -221,7 +222,6 @@ public class LessonsController : Controller
 
     private async Task<IActionResult> ReturnActivityPageWithPostedValuesAsync(
         Guid lessonId,
-        string? returnTo,
         ActivityFormViewModel posted)
     {
         var (error, vm) = await TryLoadWorkspaceAsync(lessonId);
@@ -235,10 +235,10 @@ public class LessonsController : Controller
         vm.Activity.GitHubPrUrl = string.IsNullOrWhiteSpace(posted.GitHubPrUrl) ? null : posted.GitHubPrUrl.Trim();
         vm.Activity.DeliveryNote = string.IsNullOrWhiteSpace(posted.DeliveryNote) ? null : posted.DeliveryNote.Trim();
 
-        var isActivity = string.Equals(returnTo, "activity", StringComparison.OrdinalIgnoreCase);
-        ViewData["WorkspaceSection"] = isActivity ? "activity" : "evidence";
+        ViewData["WorkspaceSection"] = "activity";
+        ViewData["Title"] = $"Entrega · {vm.Title}";
         ViewData["LessonId"] = lessonId;
-        return View(isActivity ? "Activity" : "Evidence", vm);
+        return View("Activity", vm);
     }
 
     private static void ApplyNextStep(LessonWorkspaceViewModel vm)
@@ -253,14 +253,7 @@ public class LessonsController : Controller
         if (vm.Activity is not null && !vm.ActivityDone)
         {
             vm.NextStepKey = "activity";
-            vm.NextStepLabel = vm.ActivityStarted ? "Continuar atividade" : "Fazer atividade";
-            return;
-        }
-
-        if (vm.Activity is not null && !vm.EvidenceDone)
-        {
-            vm.NextStepKey = "evidence";
-            vm.NextStepLabel = "Enviar evidência";
+            vm.NextStepLabel = vm.ActivityStarted ? "Continuar entrega" : "Fazer entrega";
             return;
         }
 
@@ -456,13 +449,7 @@ public class LessonsController : Controller
             return Forbid();
         }
 
-        IActionResult Back() => RedirectToAction(
-            string.Equals(returnTo, "activity", StringComparison.OrdinalIgnoreCase)
-                ? nameof(Activity)
-                : nameof(Evidence),
-            new { id = lessonId });
-
-        var isActivityPage = string.Equals(returnTo, "activity", StringComparison.OrdinalIgnoreCase);
+        IActionResult Back() => RedirectToAction(nameof(Activity), new { id = lessonId });
 
         if (user.TenantId is null)
         {
@@ -503,20 +490,20 @@ public class LessonsController : Controller
             if (!GitHubUrlValidator.TryValidateRepositoryUrl(repoUrl, out var repoError))
             {
                 TempData["Error"] = repoError;
-                return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+                return await ReturnActivityPageWithPostedValuesAsync(lessonId, model);
             }
 
             if (!GitHubUrlValidator.TryValidatePullRequestUrl(prUrl, out var prError))
             {
                 TempData["Error"] = prError;
-                return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+                return await ReturnActivityPageWithPostedValuesAsync(lessonId, model);
             }
         }
         else if (!string.IsNullOrWhiteSpace(repoUrl)
                  && !GitHubUrlValidator.TryValidateRepositoryUrl(repoUrl, out var optionalRepoError))
         {
             TempData["Error"] = optionalRepoError;
-            return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+            return await ReturnActivityPageWithPostedValuesAsync(lessonId, model);
         }
 
         var previousFeedback = submission.TeacherFeedback;
@@ -540,7 +527,7 @@ public class LessonsController : Controller
             if (!ok || file is null)
             {
                 TempData["Error"] = error ?? "Falha ao enviar anexo.";
-                return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+                return await ReturnActivityPageWithPostedValuesAsync(lessonId, model);
             }
 
             submission.Attachments.Add(new SubmissionAttachment
@@ -567,7 +554,7 @@ public class LessonsController : Controller
             submission.Status = ActivityStatus.InProgress;
             await _db.SaveChangesAsync();
             TempData["Error"] = "Esta atividade exige a URL do repositório no GitHub.";
-            return await ReturnActivityPageWithPostedValuesAsync(lessonId, returnTo, model);
+            return await ReturnActivityPageWithPostedValuesAsync(lessonId, model);
         }
 
         submission.Status = hasContent
@@ -578,12 +565,8 @@ public class LessonsController : Controller
 
         await _db.SaveChangesAsync();
         TempData["Success"] = hasContent
-            ? (isActivityPage
-                ? "Atividade salva. A professora poderá revisar em breve."
-                : "Evidência enviada. A professora poderá revisar em breve.")
-            : (isActivityPage
-                ? "Rascunho da atividade salvo."
-                : "Rascunho da evidência salvo.");
+            ? "Entrega salva. A professora poderá revisar em breve."
+            : "Rascunho da entrega salvo.";
         return Back();
     }
 }

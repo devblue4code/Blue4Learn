@@ -69,22 +69,24 @@ public class LessonWorkspaceViewModel
     public bool ActivityDone =>
         Activity is not null
         && (Activity.Status is ActivityStatus.Submitted or ActivityStatus.Reviewed
-            || (!string.IsNullOrWhiteSpace(Activity.ProblemDescription)
-                && !string.IsNullOrWhiteSpace(Activity.SolutionDescription)));
+            || (!string.IsNullOrWhiteSpace(Activity.GitHubUrl)
+                && Activity.RequiresGitHubDelivery)
+            || (!Activity.RequiresGitHubDelivery
+                && (!string.IsNullOrWhiteSpace(Activity.TextResponse)
+                    || Activity.Attachments.Count > 0
+                    || (!string.IsNullOrWhiteSpace(Activity.ProblemDescription)
+                        && !string.IsNullOrWhiteSpace(Activity.SolutionDescription)))));
 
     public bool ActivityStarted =>
         Activity is not null
         && (Activity.Status >= ActivityStatus.InProgress
             || !string.IsNullOrWhiteSpace(Activity.ProblemDescription)
-            || !string.IsNullOrWhiteSpace(Activity.SolutionDescription));
-
-    public bool EvidenceDone =>
-        Activity is not null
-        && (Activity.Attachments.Count > 0
+            || !string.IsNullOrWhiteSpace(Activity.SolutionDescription)
             || !string.IsNullOrWhiteSpace(Activity.TextResponse)
-            || !string.IsNullOrWhiteSpace(Activity.GitHubUrl));
+            || !string.IsNullOrWhiteSpace(Activity.GitHubUrl)
+            || Activity.Attachments.Count > 0);
 
-    /// <summary>journal | activity | evidence | next | progress</summary>
+    /// <summary>journal | activity | next | progress</summary>
     public string NextStepKey { get; set; } = "journal";
     public string NextStepLabel { get; set; } = "Registrar o que aprendi";
 }

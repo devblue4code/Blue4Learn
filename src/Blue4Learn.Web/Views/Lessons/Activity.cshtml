@@ -1,6 +1,6 @@
 @model LessonWorkspaceViewModel
 @{
-    ViewData["Title"] = $"Atividade · {Model.Title}";
+    ViewData["Title"] = $"Entrega · {Model.Title}";
     ViewData["WorkspaceSection"] = "activity";
     var activity = Model.Activity;
     var isReviewed = activity?.Status == ActivityStatus.Reviewed;
@@ -32,26 +32,17 @@
     }
     else
     {
-        <form asp-action="SaveActivity" method="post" class="soft-panel activity-form ws-panel ws-page-form">
+        <form asp-action="SaveActivity" method="post" enctype="multipart/form-data"
+              class="soft-panel activity-form ws-panel ws-page-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="lessonId" value="@Model.LessonId" />
             <input type="hidden" name="returnTo" value="activity" />
             <input type="hidden" name="ActivityId" value="@activity.ActivityId" />
-            @if (!activity.RequiresGitHubDelivery)
-            {
-                <input type="hidden" name="GitHubUrl" value="@activity.GitHubUrl" />
-                <input type="hidden" name="GitHubPrUrl" value="@activity.GitHubPrUrl" />
-                <input type="hidden" name="DeliveryNote" value="@activity.DeliveryNote" />
-            }
-            else
-            {
-                <input type="hidden" name="TextResponse" value="@activity.TextResponse" />
-            }
 
             <div class="ws-panel-head">
                 <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                     <div>
-                        <h2>Entrega via GitHub</h2>
+                        <h2>Entrega da aula</h2>
                         <p>@activity.Title</p>
                     </div>
                     <span class="prog-chip @(isReviewed ? null : activity.Status == ActivityStatus.Submitted ? "is-warn" : "is-muted")">
@@ -108,11 +99,20 @@
             }
             else
             {
-                <div class="callout mb-3">
-                    <strong>Entrega sem GitHub obrigatório</strong>
-                    <p class="mb-0">Descreva o problema e a solução. Anexos ficam em Evidências.</p>
+                <div class="mb-3">
+                    <label class="form-label" for="GitHubUrl">Link do GitHub (opcional)</label>
+                    <input id="GitHubUrl" name="GitHubUrl" class="form-control" value="@activity.GitHubUrl"
+                           placeholder="https://github.com/..." @(isReviewed ? "disabled" : null) />
                 </div>
+                <input type="hidden" name="GitHubPrUrl" value="@activity.GitHubPrUrl" />
+                <input type="hidden" name="DeliveryNote" value="@activity.DeliveryNote" />
             }
+
+            <div class="mb-3">
+                <label class="form-label" for="TextResponse">Resposta / evidência textual</label>
+                <textarea id="TextResponse" name="TextResponse" class="form-control" rows="4"
+                          @(isReviewed ? "disabled" : null)>@activity.TextResponse</textarea>
+            </div>
 
             <details class="mb-3" @(string.IsNullOrWhiteSpace(activity.ProblemDescription) && string.IsNullOrWhiteSpace(activity.SolutionDescription) ? null : "open")>
                 <summary class="mb-2">Notas opcionais (problema / solução)</summary>
@@ -128,18 +128,34 @@
                 </div>
             </details>
 
+            @if (!isReviewed)
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="Attachment">Anexo (pdf, imagem, zip, md — até 5 MB)</label>
+                    <input id="Attachment" name="Attachment" type="file" class="form-control"
+                           accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.zip" />
+                </div>
+            }
+            @if (activity.Attachments.Any())
+            {
+                <ul class="attachment-list mb-3">
+                    @foreach (var file in activity.Attachments)
+                    {
+                        <li>
+                            <a asp-controller="Files" asp-action="Attachment" asp-route-id="@file.Id">@file.FileName</a>
+                        </li>
+                    }
+                </ul>
+            }
+
             <p class="small text-muted mb-3">
-                Questionários desta aula (estilo Forms) ficam em
-                <a asp-controller="Forms" asp-action="Index" asp-route-lessonId="@Model.LessonId">Atividades</a>.
+                Questionários desta aula ficam em
+                <a asp-controller="Forms" asp-action="Index" asp-route-lessonId="@Model.LessonId">Questionário</a>.
             </p>
 
             @if (!isReviewed)
             {
                 <button type="submit" class="btn btn-primary">Salvar entrega</button>
-            }
-            else
-            {
-                <a class="btn btn-outline-primary" asp-action="Evidence" asp-route-id="@Model.LessonId">Ver evidências</a>
             }
         </form>
 
