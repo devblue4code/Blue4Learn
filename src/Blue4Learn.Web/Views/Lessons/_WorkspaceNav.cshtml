@@ -23,15 +23,15 @@
         <span>Registro</span>
         <span class="@BadgeClass(Model.JournalDone, Model.JournalNeedsAttention)" aria-hidden="true"></span>
     </a>
-    <a class="@NavClass("activity")" asp-action="Activity" asp-route-id="@Model.LessonId"
-       title="@(Model.ActivityDone ? "Entrega concluída" : Model.ActivityStarted ? "Entrega em andamento" : "Entrega da aula")">
-        <i class="bi bi-github" aria-hidden="true"></i>
-        <span>Entrega</span>
-        @if (Model.Activity is not null)
-        {
+    @if (Model.Activity is not null)
+    {
+        <a class="@NavClass("activity")" asp-action="Activity" asp-route-id="@Model.LessonId"
+           title="@(Model.ActivityDone ? "Entrega concluída" : Model.ActivityStarted ? "Entrega em andamento" : "Entrega da aula")">
+            <i class="bi bi-github" aria-hidden="true"></i>
+            <span>Entrega</span>
             <span class="@BadgeClass(Model.ActivityDone, started: Model.ActivityStarted && !Model.ActivityDone)" aria-hidden="true"></span>
-        }
-    </a>
+        </a>
+    }
     <a class="ws-side-link" asp-controller="Forms" asp-action="Index" asp-route-lessonId="@Model.LessonId"
        title="Questionários desta aula">
         <i class="bi bi-ui-checks" aria-hidden="true"></i>

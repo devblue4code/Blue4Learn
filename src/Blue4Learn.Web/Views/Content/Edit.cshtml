@@ -113,17 +113,25 @@
 
     <section class="soft-panel mb-3 pub-section">
         <div class="pub-section-head">
-            <h2>Entrega da aula (GitHub)</h2>
-            <p>Enunciado da prática e entrega pelo repositório. Questionários da aula ficam em <strong>Atividades</strong> (por aula).</p>
+            <h2>Entrega da aula</h2>
+            <p>Marque se esta aula terá entrega (GitHub/anexos). Questionários ficam em <strong>Atividades</strong>.</p>
         </div>
-        <div class="editor-grid editor-grid--activity">
+        <div class="form-check mb-3">
+            <input type="hidden" name="HasDelivery" value="false" />
+            <input asp-for="HasDelivery" class="form-check-input" id="HasDelivery" />
+            <label asp-for="HasDelivery" class="form-check-label fw-semibold">
+                Incluir entrega nesta aula
+            </label>
+            <p class="small text-muted mb-0 mt-1">Se desmarcado, a aba Entrega não aparece para o estudante.</p>
+        </div>
+        <div id="delivery-fields" class="editor-grid editor-grid--activity" @(Model.HasDelivery ? null : "hidden")>
             <div class="editor-pane">
                 <div class="editor-toolbar">
                     <label asp-for="ActivityPrompt" class="form-label h6 mb-0">Enunciado (Markdown)</label>
                 </div>
                 <textarea asp-for="ActivityPrompt" class="form-control markdown-input markdown-input--compact" id="ActivityPrompt" rows="10"
-                          placeholder="O que o aluno precisa entregar no repositório…"></textarea>
-                <p class="small text-muted mt-1 mb-0">O enunciado aparece na aba Atividade do workspace.</p>
+                          placeholder="O que o aluno precisa entregar…"></textarea>
+                <p class="small text-muted mt-1 mb-0">O enunciado aparece na aba Entrega do workspace.</p>
                 <div class="form-check mt-3">
                     <input asp-for="RequiresGitHubDelivery" class="form-check-input" id="RequiresGitHubDelivery" />
                     <label asp-for="RequiresGitHubDelivery" class="form-check-label">
@@ -242,6 +250,15 @@
             const addBtn = document.getElementById("btn-add-concept");
             const suggestBtn = document.getElementById("btn-suggest-concepts");
             const suggestStatus = document.getElementById("suggest-status");
+            const hasDelivery = document.getElementById("HasDelivery");
+            const deliveryFields = document.getElementById("delivery-fields");
+
+            function syncDeliveryFields() {
+                if (!deliveryFields || !hasDelivery) return;
+                deliveryFields.hidden = !hasDelivery.checked;
+            }
+            hasDelivery?.addEventListener("change", syncDeliveryFields);
+            syncDeliveryFields();
 
             function currentConcepts() {
                 return [...chips.querySelectorAll(".concept-chip")].map((el) => el.dataset.name);

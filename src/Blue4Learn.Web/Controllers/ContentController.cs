@@ -104,6 +104,7 @@ public class ContentController : Controller
                        > **Dica:** use o preview ao lado para validar a leitura.
                        """,
             ActivityPrompt = "## Entrega via GitHub\n\n1. Crie (ou atualize) o repositório da prática.\n2. Informe a URL do repositório abaixo.\n3. Se houver PR, cole o link (opcional).",
+            HasDelivery = false,
             RequiresGitHubDelivery = true,
             Status = ContentStatus.Draft
         });
@@ -129,6 +130,7 @@ public class ContentController : Controller
 
         if (lesson is null) return NotFound();
 
+        var activity = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault();
         var model = await BuildEditorAsync(user, new LessonEditorViewModel
         {
             Id = lesson.Id,
@@ -140,8 +142,9 @@ public class ContentController : Controller
             Status = lesson.Status,
             Markdown = lesson.ContentDocument?.Markdown ?? string.Empty,
             ConceptsText = string.Join(Environment.NewLine, lesson.Concepts.Select(c => c.Name)),
-            ActivityPrompt = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.Prompt,
-            RequiresGitHubDelivery = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault()?.RequiresGitHubDelivery ?? true,
+            HasDelivery = activity is not null,
+            ActivityPrompt = activity?.Prompt,
+            RequiresGitHubDelivery = activity?.RequiresGitHubDelivery ?? true,
             PreviewHtml = _markdown.ToSafeHtml(lesson.ContentDocument?.Markdown)
         });
 
@@ -224,6 +227,8 @@ public class ContentController : Controller
                 .Include(l => l.ContentDocument)
                 .Include(l => l.Concepts)
                 .Include(l => l.Activities)
+                    .ThenInclude(a => a.Submissions)
+                        .ThenInclude(s => s.Attachments)
                 .FirstOrDefaultAsync(l => l.Id == id)
                 ?? throw new InvalidOperationException("Aula não encontrada.");
 
@@ -259,7 +264,7 @@ public class ContentController : Controller
         lesson.ContentDocument.UpdatedAtUtc = DateTime.UtcNow;
 
         SyncConcepts(lesson, model.ConceptsText);
-        SyncActivity(lesson, model.ActivityPrompt, model.RequiresGitHubDelivery);
+        await SyncActivityAsync(lesson, model.HasDelivery, model.ActivityPrompt, model.RequiresGitHubDelivery);
 
         await _db.SaveChangesAsync();
 
@@ -467,33 +472,62 @@ public class ContentController : Controller
         }
     }
 
-    private static void SyncActivity(Lesson lesson, string? prompt, bool requiresGitHubDelivery)
+    private async Task SyncActivityAsync(
+        Lesson lesson,
+        bool hasDelivery,
+        string? prompt,
+        bool requiresGitHubDelivery)
     {
-        var activity = lesson.Activities.OrderBy(a => a.Title).FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(prompt))
+        var activities = lesson.Activities.ToList();
+        if (!hasDelivery)
         {
-            if (activity is not null)
+            foreach (var activity in activities)
             {
-                activity.RequiresGitHubDelivery = requiresGitHubDelivery;
+                foreach (var submission in activity.Submissions.ToList())
+                {
+                    _db.SubmissionAttachments.RemoveRange(submission.Attachments);
+                    _db.ActivitySubmissions.Remove(submission);
+                }
+
+                _db.Activities.Remove(activity);
             }
 
             return;
         }
 
-        if (activity is null)
+        var text = string.IsNullOrWhiteSpace(prompt)
+            ? "## Entrega da aula\n\nDescreva o que o estudante deve entregar."
+            : prompt.Trim();
+
+        var existing = activities.OrderBy(a => a.Title).FirstOrDefault();
+        if (existing is null)
         {
             lesson.Activities.Add(new Domain.Activity
             {
-                Title = $"Atividade — {lesson.Title}",
-                Prompt = prompt.Trim(),
+                Title = $"Entrega — {lesson.Title}",
+                Prompt = text,
                 DueAtUtc = DateTime.UtcNow.AddDays(7),
                 RequiresGitHubDelivery = requiresGitHubDelivery
             });
             return;
         }
 
-        activity.Title = $"Atividade — {lesson.Title}";
-        activity.Prompt = prompt.Trim();
-        activity.RequiresGitHubDelivery = requiresGitHubDelivery;
+        existing.Title = $"Entrega — {lesson.Title}";
+        existing.Prompt = text;
+        existing.RequiresGitHubDelivery = requiresGitHubDelivery;
+
+        // Remove extras if any
+        foreach (var extra in activities.Where(a => a.Id != existing.Id))
+        {
+            foreach (var submission in extra.Submissions.ToList())
+            {
+                _db.SubmissionAttachments.RemoveRange(submission.Attachments);
+                _db.ActivitySubmissions.Remove(submission);
+            }
+
+            _db.Activities.Remove(extra);
+        }
+
+        await Task.CompletedTask;
     }
 }
