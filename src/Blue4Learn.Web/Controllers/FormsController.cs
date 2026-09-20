@@ -550,6 +550,16 @@ public class FormsController : Controller
         var form = await LoadPublishedFormForStudentAsync(user, id);
         if (form is null) return NotFound();
 
+        var existing = await _db.FormResponses
+            .Include(r => r.Answers)
+            .FirstOrDefaultAsync(r => r.FormId == id && r.UserId == user.Id);
+
+        if (existing is not null)
+        {
+            TempData["Error"] = "Você já enviou este questionário. Só é permitida uma tentativa.";
+            return RedirectToAction(nameof(Fill), new { id });
+        }
+
         var posted = (model.Questions ?? [])
             .Where(q => q.QuestionId != Guid.Empty)
             .ToList();
@@ -557,57 +567,22 @@ public class FormsController : Controller
             .GroupBy(q => q.QuestionId)
             .ToDictionary(g => g.Key, g => g.First());
 
-        foreach (var question in form.Questions.OrderBy(q => q.SortOrder))
-        {
-            postedById.TryGetValue(question.Id, out var answer);
-            if (question.IsRequired && !HasAnswer(question, answer))
-            {
-                ModelState.AddModelError(string.Empty, $"Responda: {question.Prompt}");
-            }
-        }
-
+        // Com timer, pergunta sem resposta (tempo esgotado) é permitida — conta como erro/em branco.
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Confira as perguntas obrigatórias antes de enviar.";
-            var existing = await _db.FormResponses
-                .AsNoTracking()
-                .Include(r => r.Answers)
-                .FirstOrDefaultAsync(r => r.FormId == id && r.UserId == user.Id);
-            var vm = ToFillVm(form, existing);
-            foreach (var q in vm.Questions)
-            {
-                if (postedById.TryGetValue(q.QuestionId, out var postedQ))
-                {
-                    q.TextValue = postedQ.TextValue;
-                    q.SelectedOptions = postedQ.SelectedOptions ?? [];
-                }
-            }
-
-            return View(vm);
+            TempData["Error"] = "Não foi possível enviar. Tente novamente.";
+            return View(ToFillVm(form, existing: null));
         }
 
-        var response = await _db.FormResponses
-            .Include(r => r.Answers)
-            .FirstOrDefaultAsync(r => r.FormId == id && r.UserId == user.Id);
-
-        if (response is null)
+        var response = new FormResponse
         {
-            response = new FormResponse
-            {
-                FormId = form.Id,
-                UserId = user.Id
-            };
-            _db.FormResponses.Add(response);
-            await _db.SaveChangesAsync();
-        }
-        else
-        {
-            _db.FormAnswers.RemoveRange(response.Answers);
-            response.UpdatedAtUtc = DateTime.UtcNow;
-            response.SubmittedAtUtc = DateTime.UtcNow;
-        }
+            FormId = form.Id,
+            UserId = user.Id
+        };
+        _db.FormResponses.Add(response);
+        await _db.SaveChangesAsync();
 
-        var answeredCount = 0;
+        var answeredIds = new HashSet<Guid>();
         foreach (var question in form.Questions)
         {
             postedById.TryGetValue(question.Id, out var answer);
@@ -616,7 +591,7 @@ public class FormsController : Controller
                 continue;
             }
 
-            answeredCount++;
+            answeredIds.Add(question.Id);
             var selected = question.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice
                 ? NormalizeSelections(question, answer!)
                 : [];
@@ -636,10 +611,25 @@ public class FormsController : Controller
             });
         }
 
+        // Perguntas sem resposta mas com gabarito → registradas como erradas.
+        foreach (var question in form.Questions)
+        {
+            if (answeredIds.Contains(question.Id)) continue;
+            var correct = FormQuestionEditViewModel.ParseOptionsJson(question.CorrectOptionsJson);
+            if (correct.Count == 0) continue;
+
+            _db.FormAnswers.Add(new FormAnswer
+            {
+                ResponseId = response.Id,
+                QuestionId = question.Id,
+                IsCorrect = false
+            });
+        }
+
         await _db.SaveChangesAsync();
-        TempData["Success"] = answeredCount == 0
-            ? "Envio registrado. Nenhuma resposta foi preenchida."
-            : "Respostas enviadas! Confira o resultado abaixo.";
+        TempData["Success"] = answeredIds.Count == 0
+            ? "Tempo esgotado sem respostas. Confira o resultado abaixo."
+            : "Questionário enviado! Confira seu resultado — só uma tentativa.";
         return RedirectToAction(nameof(Fill), new { id = form.Id });
     }
 

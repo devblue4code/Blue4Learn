@@ -3,7 +3,10 @@
     ViewData["Title"] = Model.IsTeacherPreview ? $"Preview · {Model.Title}" : Model.Title;
     ViewData["TopTitle"] = "Questionário";
     var showResults = Model.ShowResults && !Model.IsTeacherPreview;
+    var isLocked = Model.IsLocked;
+    var isTimedRun = !Model.IsTeacherPreview && !isLocked;
     var total = Model.Questions.Count;
+    var seconds = Model.SecondsPerQuestion;
     string TypeHint(FormQuestionType t) => t switch
     {
         FormQuestionType.ShortText => "Resposta curta",
@@ -14,7 +17,10 @@
     };
 }
 
-<div class="form-fill-page">
+<div class="form-fill-page"
+     data-seconds="@seconds"
+     data-timed="@(isTimedRun ? "true" : "false")"
+     data-locked="@(isLocked ? "true" : "false")">
     <div class="page-header form-fill-header">
         <div>
             <p class="eyebrow">@Model.LessonContext</p>
@@ -24,6 +30,10 @@
                 @if (total > 0)
                 {
                     <span class="form-fill-count">· @total pergunta@(total == 1 ? "" : "s")</span>
+                }
+                @if (isTimedRun)
+                {
+                    <span class="form-fill-count">· @seconds s por pergunta · 1 tentativa</span>
                 }
             </p>
             @if (!string.IsNullOrWhiteSpace(Model.Description))
@@ -51,7 +61,7 @@
             <i class="bi bi-eye" aria-hidden="true"></i>
             <div>
                 <strong>Modo preview</strong>
-                <p class="mb-0">Você vê o formulário como o estudante. O envio fica desativado.</p>
+                <p class="mb-0">Visão do estudante. O aluno tem @seconds s por pergunta e só uma tentativa.</p>
             </div>
         </div>
     }
@@ -60,18 +70,41 @@
         <div class="form-fill-banner is-score" role="status">
             <i class="bi bi-clipboard-check" aria-hidden="true"></i>
             <div>
-                <strong>Resultado: @Model.ScoreCorrect de @graded</strong>
-                <p class="mb-0">Revise o feedback em cada pergunta. Pode corrigir e enviar de novo.</p>
+                <strong>Resultado final: @Model.ScoreCorrect de @graded</strong>
+                <p class="mb-0">Tentativa única — não é possível responder de novo.</p>
             </div>
         </div>
     }
-    else if (Model.AlreadyResponded)
+    else if (isLocked)
     {
         <div class="form-fill-banner is-info" role="status">
-            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            <i class="bi bi-lock" aria-hidden="true"></i>
             <div>
-                <strong>Você já respondeu</strong>
-                <p class="mb-0">Altere o que quiser e envie novamente para atualizar.</p>
+                <strong>Questionário concluído</strong>
+                <p class="mb-0">Você já usou sua única tentativa.</p>
+            </div>
+        </div>
+    }
+    else if (isTimedRun)
+    {
+        <div class="form-fill-banner is-info" role="status">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i>
+            <div>
+                <strong>Cronômetro ativo</strong>
+                <p class="mb-0">@seconds segundos por pergunta. Ao acabar o tempo, passa automaticamente. Só uma chance de envio.</p>
+            </div>
+        </div>
+    }
+
+    @if (isTimedRun)
+    {
+        <div class="form-fill-timer" id="form-fill-timer" aria-live="polite">
+            <div class="form-fill-timer-meta">
+                <span id="form-fill-progress">Pergunta 1 de @total</span>
+                <strong id="form-fill-countdown">@seconds s</strong>
+            </div>
+            <div class="form-fill-timer-track" aria-hidden="true">
+                <div class="form-fill-timer-bar" id="form-fill-timer-bar"></div>
             </div>
         </div>
     }
@@ -87,17 +120,14 @@
             var cardState = showResults && q.IsCorrect == true ? "is-correct"
                 : showResults && q.IsCorrect == false ? "is-incorrect"
                 : "";
-            <article class="form-fill-card @cardState" data-question-index="@i">
+            var hideTimed = isTimedRun && i > 0;
+            <article class="form-fill-card @cardState @(hideTimed ? "is-hidden-step" : null)"
+                     data-question-index="@i"
+                     @(hideTimed ? "hidden" : null)>
                 <header class="form-fill-card-head">
                     <span class="form-fill-num" aria-hidden="true">@(i + 1)</span>
                     <div class="form-fill-card-title">
-                        <h2>
-                            @q.Prompt
-                            @if (q.IsRequired)
-                            {
-                                <span class="form-fill-req" title="Obrigatória">*</span>
-                            }
-                        </h2>
+                        <h2>@q.Prompt</h2>
                         <p class="form-fill-hint">
                             @TypeHint(q.Type)
                             @if (showResults && q.IsCorrect == true)
@@ -114,7 +144,7 @@
 
                 <input type="hidden" name="Questions[@i].QuestionId" value="@q.QuestionId" />
                 <input type="hidden" name="Questions[@i].Type" value="@q.Type" />
-                <input type="hidden" name="Questions[@i].IsRequired" value="@(q.IsRequired ? "true" : "false")" />
+                <input type="hidden" name="Questions[@i].IsRequired" value="false" />
                 <input type="hidden" name="Questions[@i].Prompt" value="@q.Prompt" />
 
                 <div class="form-fill-card-body">
@@ -125,13 +155,13 @@
                                    maxlength="500" autocomplete="off"
                                    placeholder="Digite sua resposta"
                                    aria-label="@q.Prompt"
-                                   @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null)) />
+                                   @(isLocked ? "readonly" : null) />
                             break;
                         case FormQuestionType.Paragraph:
                             <textarea class="form-control form-fill-input" name="Questions[@i].TextValue" rows="5"
                                       maxlength="4000" placeholder="Escreva com detalhes…"
                                       aria-label="@q.Prompt"
-                                      @(Model.IsTeacherPreview ? null : (q.IsRequired ? "required" : null))>@q.TextValue</textarea>
+                                      @(isLocked ? "readonly" : null)>@q.TextValue</textarea>
                             break;
                         case FormQuestionType.SingleChoice:
                             <div class="form-fill-options" role="radiogroup" aria-label="@q.Prompt">
@@ -151,7 +181,7 @@
                                         <input type="radio"
                                                name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
                                                @(selected ? "checked" : null)
-                                               @(Model.IsTeacherPreview ? null : (q.IsRequired && oi == 0 ? "required" : null)) />
+                                               @(isLocked ? "disabled" : null) />
                                         <span class="form-fill-option-mark" aria-hidden="true"></span>
                                         <span class="form-fill-option-text">@opt</span>
                                     </label>
@@ -175,7 +205,8 @@
                                     <label class="form-fill-option is-multi @optClass" for="@optId">
                                         <input type="checkbox"
                                                name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
-                                               @(selected ? "checked" : null) />
+                                               @(selected ? "checked" : null)
+                                               @(isLocked ? "disabled" : null) />
                                         <span class="form-fill-option-mark" aria-hidden="true"></span>
                                         <span class="form-fill-option-text">@opt</span>
                                     </label>
@@ -211,38 +242,127 @@
         <div class="form-fill-actions">
             @if (Model.IsTeacherPreview)
             {
-                <button type="button" class="btn btn-primary btn-lg" disabled>Enviar respostas (preview)</button>
+                <button type="button" class="btn btn-primary btn-lg" disabled>Enviar (preview)</button>
+            }
+            else if (isLocked)
+            {
+                <p class="form-fill-actions-note mb-0">Resultado bloqueado — tentativa única.</p>
+            }
+            else if (isTimedRun)
+            {
+                <button type="button" class="btn btn-primary btn-lg" id="form-fill-next">Próxima pergunta</button>
+                <button type="submit" class="btn btn-primary btn-lg" id="form-fill-submit" hidden>Enviar respostas</button>
+                <p class="form-fill-actions-note mb-0">Ou aguarde o tempo acabar para avançar automaticamente.</p>
             }
             else
             {
-                <button type="submit" class="btn btn-primary btn-lg" id="form-fill-submit">
-                    @(showResults || Model.AlreadyResponded ? "Atualizar respostas" : "Enviar respostas")
-                </button>
-                <p class="form-fill-actions-note mb-0">
-                    @(showResults ? "Suas respostas anteriores serão substituídas." : "Você poderá revisar o resultado depois do envio.")
-                </p>
+                <button type="submit" class="btn btn-primary btn-lg" id="form-fill-submit">Enviar respostas</button>
             }
         </div>
     </form>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        (() => {
-            const form = document.getElementById('form-fill');
-            const btn = document.getElementById('form-fill-submit');
-            if (!form || !btn) return;
+    @if (isTimedRun)
+    {
+        <script>
+            (() => {
+                const page = document.querySelector('.form-fill-page');
+                const form = document.getElementById('form-fill');
+                const cards = [...form.querySelectorAll('.form-fill-card')];
+                const nextBtn = document.getElementById('form-fill-next');
+                const submitBtn = document.getElementById('form-fill-submit');
+                const progressEl = document.getElementById('form-fill-progress');
+                const countdownEl = document.getElementById('form-fill-countdown');
+                const barEl = document.getElementById('form-fill-timer-bar');
+                const total = cards.length;
+                const secondsPer = Number(page.dataset.seconds || 40);
+                let index = 0;
+                let remaining = secondsPer;
+                let timerId = null;
+                let submitting = false;
 
-            form.addEventListener('submit', () => {
-                btn.disabled = true;
-                btn.textContent = 'Enviando…';
-            });
+                function show(i) {
+                    cards.forEach((card, n) => {
+                        const on = n === i;
+                        card.hidden = !on;
+                        card.classList.toggle('is-hidden-step', !on);
+                    });
+                    progressEl.textContent = `Pergunta ${i + 1} de ${total}`;
+                    const last = i >= total - 1;
+                    nextBtn.hidden = last;
+                    nextBtn.textContent = 'Próxima pergunta';
+                    submitBtn.hidden = !last;
+                    if (last) submitBtn.textContent = 'Enviar respostas';
+                }
 
-            const firstInvalid = form.querySelector(':invalid');
-            if (firstInvalid) {
-                firstInvalid.closest('.form-fill-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        })();
-    </script>
+                function paintTimer() {
+                    countdownEl.textContent = `${remaining} s`;
+                    const pct = Math.max(0, (remaining / secondsPer) * 100);
+                    barEl.style.width = pct + '%';
+                    barEl.classList.toggle('is-urgent', remaining <= 8);
+                }
+
+                function clearTimer() {
+                    if (timerId) {
+                        clearInterval(timerId);
+                        timerId = null;
+                    }
+                }
+
+                function startTimer() {
+                    clearTimer();
+                    remaining = secondsPer;
+                    paintTimer();
+                    timerId = setInterval(() => {
+                        remaining -= 1;
+                        paintTimer();
+                        if (remaining <= 0) {
+                            clearTimer();
+                            advance(true);
+                        }
+                    }, 1000);
+                }
+
+                function advance(fromTimeout) {
+                    if (submitting) return;
+                    if (index >= total - 1) {
+                        finish();
+                        return;
+                    }
+                    index += 1;
+                    show(index);
+                    startTimer();
+                    if (fromTimeout) {
+                        countdownEl.textContent = `${secondsPer} s`;
+                    }
+                }
+
+                function finish() {
+                    if (submitting) return;
+                    submitting = true;
+                    clearTimer();
+                    nextBtn.disabled = true;
+                    submitBtn.disabled = true;
+                    submitBtn.hidden = false;
+                    submitBtn.textContent = 'Enviando…';
+                    // disabled radios/checkboxes are not posted — leave enabled until submit
+                    form.requestSubmit ? form.requestSubmit() : form.submit();
+                }
+
+                nextBtn?.addEventListener('click', () => advance(false));
+                form.addEventListener('submit', () => {
+                    submitting = true;
+                    clearTimer();
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Enviando…';
+                    }
+                });
+
+                show(0);
+                startTimer();
+            })();
+        </script>
+    }
 }
