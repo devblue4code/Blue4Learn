@@ -207,7 +207,13 @@ public class ContentController : Controller
 
         if (!ModelState.IsValid)
         {
+            if (!model.IsEdit && classGroup is not null)
+            {
+                model.SortOrder = await NextSortOrderAsync(classGroup.Id, model.ModuleId);
+            }
+
             model.PreviewHtml = _markdown.ToSafeHtml(model.Markdown);
+            model.ActivityPreviewHtml = _markdown.ToSafeHtml(model.ActivityPrompt);
             return View("Edit", model);
         }
 
@@ -236,7 +242,11 @@ public class ContentController : Controller
         lesson.Title = model.Title.Trim();
         lesson.Slug = model.Slug!;
         lesson.Objective = model.Objective.Trim();
-        lesson.SortOrder = model.SortOrder;
+        if (!model.IsEdit)
+        {
+            lesson.SortOrder = await NextSortOrderAsync(classGroup!.Id, model.ModuleId);
+        }
+
         lesson.Status = model.Status;
 
         if (lesson.ContentDocument is null)
@@ -342,13 +352,17 @@ public class ContentController : Controller
             model.ModuleId = model.Modules[0].Id;
         }
 
-        if (model.SortOrder < 1)
+        if (!model.IsEdit)
         {
-            var maxOrder = await _db.Lessons
-                .Where(l => l.ModuleId == model.ModuleId)
-                .Select(l => (int?)l.SortOrder)
-                .MaxAsync() ?? 0;
-            model.SortOrder = maxOrder + 1;
+            var classGroup = await _context.ResolveClassAsync(user);
+            if (classGroup is not null && model.ModuleId != Guid.Empty)
+            {
+                model.SortOrder = await NextSortOrderAsync(classGroup.Id, model.ModuleId);
+            }
+            else if (model.SortOrder < 1)
+            {
+                model.SortOrder = 1;
+            }
         }
 
         model.PreviewHtml ??= _markdown.ToSafeHtml(model.Markdown);
@@ -371,6 +385,15 @@ public class ContentController : Controller
         }
 
         return model;
+    }
+
+    private async Task<int> NextSortOrderAsync(Guid classGroupId, Guid moduleId)
+    {
+        var maxOrder = await _db.Lessons
+            .Where(l => l.ClassGroupId == classGroupId && l.ModuleId == moduleId)
+            .Select(l => (int?)l.SortOrder)
+            .MaxAsync() ?? 0;
+        return maxOrder + 1;
     }
 
     private async Task<IReadOnlyList<ModuleOptionViewModel>> LoadModulesAsync(ApplicationUser user)
