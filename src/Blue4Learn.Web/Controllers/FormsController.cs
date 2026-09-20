@@ -542,11 +542,20 @@ public class FormsController : Controller
             return Forbid();
         }
 
+        if (id == Guid.Empty && model.FormId != Guid.Empty)
+        {
+            id = model.FormId;
+        }
+
         var form = await LoadPublishedFormForStudentAsync(user, id);
         if (form is null) return NotFound();
 
-        var posted = model.Questions ?? [];
-        var postedById = posted.ToDictionary(q => q.QuestionId);
+        var posted = (model.Questions ?? [])
+            .Where(q => q.QuestionId != Guid.Empty)
+            .ToList();
+        var postedById = posted
+            .GroupBy(q => q.QuestionId)
+            .ToDictionary(g => g.Key, g => g.First());
 
         foreach (var question in form.Questions.OrderBy(q => q.SortOrder))
         {
@@ -559,6 +568,7 @@ public class FormsController : Controller
 
         if (!ModelState.IsValid)
         {
+            TempData["Error"] = "Confira as perguntas obrigatórias antes de enviar.";
             var existing = await _db.FormResponses
                 .AsNoTracking()
                 .Include(r => r.Answers)
@@ -597,6 +607,7 @@ public class FormsController : Controller
             response.SubmittedAtUtc = DateTime.UtcNow;
         }
 
+        var answeredCount = 0;
         foreach (var question in form.Questions)
         {
             postedById.TryGetValue(question.Id, out var answer);
@@ -605,6 +616,7 @@ public class FormsController : Controller
                 continue;
             }
 
+            answeredCount++;
             var selected = question.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice
                 ? NormalizeSelections(question, answer!)
                 : [];
@@ -625,7 +637,9 @@ public class FormsController : Controller
         }
 
         await _db.SaveChangesAsync();
-        TempData["Success"] = "Respostas enviadas. Confira o feedback abaixo.";
+        TempData["Success"] = answeredCount == 0
+            ? "Envio registrado. Nenhuma resposta foi preenchida."
+            : "Respostas enviadas! Confira o resultado abaixo.";
         return RedirectToAction(nameof(Fill), new { id = form.Id });
     }
 
