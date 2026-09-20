@@ -3528,10 +3528,20 @@ html[data-theme="dark"] .markdown-body {
   color: #b02a37;
 }
 
+.form-result-chip.is-muted {
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  color: var(--muted);
+}
+
 .form-feedback {
   padding: .65rem .85rem;
   border-radius: 10px;
   font-size: .92rem;
+}
+
+.form-feedback strong {
+  display: block;
+  margin-bottom: .2rem;
 }
 
 .form-feedback.is-ok {
@@ -3544,6 +3554,68 @@ html[data-theme="dark"] .markdown-body {
   background: color-mix(in srgb, #dc3545 12%, var(--surface));
   color: #b02a37;
   border: 1px solid color-mix(in srgb, #dc3545 35%, var(--line));
+}
+
+.form-feedback.is-muted {
+  background: color-mix(in srgb, var(--muted) 10%, var(--surface));
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.form-fill-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+  margin: 0 0 1.25rem;
+}
+
+.form-fill-score-pill {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  padding: .85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.form-fill-score-pill span {
+  font-size: .8rem;
+  color: var(--muted);
+}
+
+.form-fill-score-pill strong {
+  font-size: 1.45rem;
+  line-height: 1.1;
+  color: var(--blue-deep);
+}
+
+.form-fill-score-pill.is-ok strong { color: #146c43; }
+.form-fill-score-pill.is-bad strong { color: #b02a37; }
+
+.form-fill-opt-tag {
+  display: inline-block;
+  margin-left: .4rem;
+  font-style: normal;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .05rem .35rem;
+  border-radius: 999px;
+}
+
+.form-fill-opt-tag.is-ok {
+  background: color-mix(in srgb, #198754 18%, transparent);
+  color: #146c43;
+}
+
+.form-fill-opt-tag.is-bad {
+  background: color-mix(in srgb, #dc3545 16%, transparent);
+  color: #b02a37;
+}
+
+.form-fill-option.is-selected {
+  border-color: color-mix(in srgb, var(--blue) 45%, var(--line));
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
 }
 
 /* —— Fill (aluno) —— */

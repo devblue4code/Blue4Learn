@@ -149,7 +149,9 @@ public class FormFillViewModel
     public bool IsLocked => AlreadyResponded && !IsTeacherPreview;
     public int SecondsPerQuestion { get; set; } = 40;
     public int? ScoreCorrect { get; set; }
+    public int? ScoreIncorrect { get; set; }
     public int? ScoreGraded { get; set; }
+    public int ScoreBlank { get; set; }
     public List<FormFillQuestionViewModel> Questions { get; set; } = [];
 }
 
@@ -167,6 +169,14 @@ public class FormFillQuestionViewModel
     public string? FeedbackCorrect { get; set; }
     public string? FeedbackIncorrect { get; set; }
     public bool HasGrading => CorrectOptions.Count > 0;
+    public bool WasAnswered =>
+        Type is FormQuestionType.ShortText or FormQuestionType.Paragraph
+            ? !string.IsNullOrWhiteSpace(TextValue)
+            : SelectedOptions.Count > 0;
+    public string? FeedbackShown =>
+        IsCorrect == true ? FeedbackCorrect
+        : IsCorrect == false ? FeedbackIncorrect
+        : null;
 }
 
 public class FormResponsesViewModel
