@@ -135,6 +135,52 @@ else
                         <label class="form-label" for="opts-@q.Id">Opções (uma por linha)</label>
                         <textarea id="opts-@q.Id" name="OptionsText" class="form-control" rows="4">@q.OptionsText</textarea>
                     </div>
+                    @if (q.Type == FormQuestionType.SingleChoice)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label" for="correct-@q.Id">Resposta correta</label>
+                            <select id="correct-@q.Id" name="CorrectOptionSingle" class="form-select">
+                                <option value="">Selecione…</option>
+                                @foreach (var opt in q.Options)
+                                {
+                                    if (string.Equals(q.CorrectOptionSingle, opt, StringComparison.Ordinal))
+                                    {
+                                        <option value="@opt" selected>@opt</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@opt">@opt</option>
+                                    }
+                                }
+                            </select>
+                            <p class="small text-muted mb-0">O texto precisa ser igual a uma das linhas de opções. Após mudar as opções, salve e ajuste a correta.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label d-block">Respostas corretas</label>
+                            @foreach (var opt in q.Options)
+                            {
+                                var cid = $"c-{q.Id}-{opt.GetHashCode()}";
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="CorrectOptions" value="@opt" id="@cid"
+                                           @(q.CorrectOptions.Contains(opt) ? "checked" : null) />
+                                    <label class="form-check-label" for="@cid">@opt</label>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label" for="fb-ok-@q.Id">Feedback se acertar</label>
+                        <input id="fb-ok-@q.Id" name="FeedbackCorrect" class="form-control" value="@q.FeedbackCorrect"
+                               placeholder="Ex.: Isso mesmo!" maxlength="1000" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="fb-bad-@q.Id">Feedback se errar</label>
+                        <input id="fb-bad-@q.Id" name="FeedbackIncorrect" class="form-control" value="@q.FeedbackIncorrect"
+                               placeholder="Ex.: Revise e tente de novo." maxlength="1000" />
+                    </div>
                 }
                 else
                 {

@@ -245,6 +245,10 @@ public class FormQuestion
     public int SortOrder { get; set; }
     /// <summary>JSON array of option labels for SingleChoice / MultiChoice.</summary>
     public string OptionsJson { get; set; } = "[]";
+    /// <summary>JSON array of correct option labels (choice questions).</summary>
+    public string CorrectOptionsJson { get; set; } = "[]";
+    public string? FeedbackCorrect { get; set; }
+    public string? FeedbackIncorrect { get; set; }
 }
 
 public class FormResponse
@@ -269,4 +273,5 @@ public class FormAnswer
     public string? TextValue { get; set; }
     /// <summary>JSON array of selected option labels.</summary>
     public string? SelectedOptionsJson { get; set; }
+    public bool? IsCorrect { get; set; }
 }

@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = Model.Title;
     ViewData["TopTitle"] = "Atividades";
+    var showResults = Model.ShowResults;
 }
 
 <div class="page-header">
@@ -12,7 +13,14 @@
         {
             <p class="section-lead">@Model.Description</p>
         }
-        @if (Model.AlreadyResponded)
+        @if (showResults && Model.ScoreGraded is int graded && graded > 0)
+        {
+            <p class="mb-0">
+                Resultado:
+                <strong>@Model.ScoreCorrect / @graded</strong> corretas
+            </p>
+        }
+        else if (Model.AlreadyResponded)
         {
             <p class="small text-muted mb-0">Você já enviou respostas — pode atualizar e enviar de novo.</p>
         }
@@ -33,12 +41,20 @@
         <input type="hidden" name="Questions[@i].IsRequired" value="@q.IsRequired" />
         <input type="hidden" name="Questions[@i].Prompt" value="@q.Prompt" />
 
-        <fieldset class="mb-4 form-fill-question">
+        <fieldset class="mb-4 form-fill-question @(showResults && q.IsCorrect == true ? "is-correct" : null) @(showResults && q.IsCorrect == false ? "is-incorrect" : null)">
             <legend class="h6 mb-2">
                 @(i + 1). @q.Prompt
                 @if (q.IsRequired)
                 {
                     <span class="text-danger">*</span>
+                }
+                @if (showResults && q.IsCorrect == true)
+                {
+                    <span class="form-result-chip is-ok">Certa</span>
+                }
+                else if (showResults && q.IsCorrect == false)
+                {
+                    <span class="form-result-chip is-bad">Errada</span>
                 }
             </legend>
 
@@ -56,10 +72,18 @@
                     @foreach (var opt in q.Options)
                     {
                         var optId = $"q{i}-{opt.GetHashCode()}";
-                        <div class="form-check">
+                        var selected = q.SelectedOptions.Contains(opt);
+                        var isAnswer = q.CorrectOptions.Contains(opt);
+                        var optClass = "";
+                        if (showResults && q.HasGrading)
+                        {
+                            if (isAnswer) optClass = "form-option is-correct";
+                            else if (selected) optClass = "form-option is-incorrect";
+                        }
+                        <div class="form-check @optClass">
                             <input class="form-check-input" type="radio"
                                    name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
-                                   @(q.SelectedOptions.Contains(opt) ? "checked" : null)
+                                   @(selected ? "checked" : null)
                                    @(q.IsRequired ? "required" : null) />
                             <label class="form-check-label" for="@optId">@opt</label>
                         </div>
@@ -69,14 +93,34 @@
                     @foreach (var opt in q.Options)
                     {
                         var optId = $"q{i}-{opt.GetHashCode()}";
-                        <div class="form-check">
+                        var selected = q.SelectedOptions.Contains(opt);
+                        var isAnswer = q.CorrectOptions.Contains(opt);
+                        var optClass = "";
+                        if (showResults && q.HasGrading)
+                        {
+                            if (isAnswer) optClass = "form-option is-correct";
+                            else if (selected) optClass = "form-option is-incorrect";
+                        }
+                        <div class="form-check @optClass">
                             <input class="form-check-input" type="checkbox"
                                    name="Questions[@i].SelectedOptions" value="@opt" id="@optId"
-                                   @(q.SelectedOptions.Contains(opt) ? "checked" : null) />
+                                   @(selected ? "checked" : null) />
                             <label class="form-check-label" for="@optId">@opt</label>
                         </div>
                     }
                     break;
+            }
+
+            @if (showResults && q.HasGrading)
+            {
+                if (q.IsCorrect == true && !string.IsNullOrWhiteSpace(q.FeedbackCorrect))
+                {
+                    <div class="form-feedback is-ok mt-2">@q.FeedbackCorrect</div>
+                }
+                else if (q.IsCorrect == false && !string.IsNullOrWhiteSpace(q.FeedbackIncorrect))
+                {
+                    <div class="form-feedback is-bad mt-2">@q.FeedbackIncorrect</div>
+                }
             }
         </fieldset>
     }

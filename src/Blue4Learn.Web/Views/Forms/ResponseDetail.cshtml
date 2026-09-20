@@ -25,9 +25,44 @@
 
 @foreach (var a in Model.Answers)
 {
-    <article class="soft-panel mb-3">
-        <p class="small text-muted mb-1">@TypeLabel(a.Type)</p>
+    <article class="soft-panel mb-3 @(a.IsCorrect == true ? "form-fill-question is-correct" : null) @(a.IsCorrect == false ? "form-fill-question is-incorrect" : null)">
+        <p class="small text-muted mb-1">
+            @TypeLabel(a.Type)
+            @if (a.IsCorrect == true)
+            {
+                <span class="form-result-chip is-ok">Certa</span>
+            }
+            else if (a.IsCorrect == false)
+            {
+                <span class="form-result-chip is-bad">Errada</span>
+            }
+        </p>
         <h2 class="h6">@a.Prompt</h2>
-        <p class="mb-0">@a.DisplayValue</p>
+        @if (a.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice)
+        {
+            <ul class="list-unstyled mb-2">
+                @foreach (var opt in a.Options)
+                {
+                    var selected = a.SelectedOptions.Contains(opt);
+                    var isAnswer = a.CorrectOptions.Contains(opt);
+                    var cls = isAnswer ? "form-option is-correct" : (selected ? "form-option is-incorrect" : "");
+                    <li class="@cls py-1 px-2 mb-1 rounded">
+                        @(selected ? "●" : "○") @opt
+                        @if (isAnswer)
+                        {
+                            <span class="small">(correta)</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="mb-0">@a.DisplayValue</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(a.FeedbackShown))
+        {
+            <div class="form-feedback @(a.IsCorrect == true ? "is-ok" : "is-bad") mt-2">@a.FeedbackShown</div>
+        }
     </article>
 }

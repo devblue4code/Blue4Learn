@@ -3481,3 +3481,67 @@ html[data-theme="dark"] .markdown-body {
   margin-bottom: 0;
   padding-left: 1.1rem;
 }
+
+.form-option.is-correct,
+.form-fill-question.is-correct {
+  background: color-mix(in srgb, #198754 14%, var(--surface));
+  border-radius: 8px;
+}
+
+.form-option.is-incorrect,
+.form-fill-question.is-incorrect {
+  background: color-mix(in srgb, #dc3545 12%, var(--surface));
+  border-radius: 8px;
+}
+
+.form-check.form-option {
+  padding: .45rem .65rem .45rem 2rem;
+  margin-bottom: .35rem;
+  border: 1px solid transparent;
+}
+
+.form-check.form-option.is-correct {
+  border-color: color-mix(in srgb, #198754 45%, var(--line));
+}
+
+.form-check.form-option.is-incorrect {
+  border-color: color-mix(in srgb, #dc3545 45%, var(--line));
+}
+
+.form-result-chip {
+  display: inline-block;
+  margin-left: .5rem;
+  padding: .1rem .45rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.form-result-chip.is-ok {
+  background: color-mix(in srgb, #198754 18%, transparent);
+  color: #146c43;
+}
+
+.form-result-chip.is-bad {
+  background: color-mix(in srgb, #dc3545 16%, transparent);
+  color: #b02a37;
+}
+
+.form-feedback {
+  padding: .65rem .85rem;
+  border-radius: 10px;
+  font-size: .92rem;
+}
+
+.form-feedback.is-ok {
+  background: color-mix(in srgb, #198754 14%, var(--surface));
+  color: #146c43;
+  border: 1px solid color-mix(in srgb, #198754 35%, var(--line));
+}
+
+.form-feedback.is-bad {
+  background: color-mix(in srgb, #dc3545 12%, var(--surface));
+  color: #b02a37;
+  border: 1px solid color-mix(in srgb, #dc3545 35%, var(--line));
+}

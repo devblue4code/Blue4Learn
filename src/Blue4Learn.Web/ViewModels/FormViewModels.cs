@@ -84,6 +84,20 @@ public class FormQuestionEditViewModel
     [Display(Name = "Opções (uma por linha)")]
     public string OptionsText { get; set; } = "Opção 1\nOpção 2";
 
+    /// <summary>Correct option labels (one for single choice; one+ for multi).</summary>
+    public List<string> CorrectOptions { get; set; } = [];
+
+    [Display(Name = "Resposta correta (texto exato de uma opção)")]
+    public string? CorrectOptionSingle { get; set; }
+
+    [StringLength(1000)]
+    [Display(Name = "Feedback se acertar")]
+    public string? FeedbackCorrect { get; set; }
+
+    [StringLength(1000)]
+    [Display(Name = "Feedback se errar")]
+    public string? FeedbackIncorrect { get; set; }
+
     public IReadOnlyList<string> Options => ParseOptions(OptionsText);
 
     public static string OptionsToText(string? optionsJson)
@@ -113,7 +127,7 @@ public class FormQuestionEditViewModel
     }
 
     public static string ToOptionsJson(IEnumerable<string> options) =>
-        JsonSerializer.Serialize(options.Where(o => !string.IsNullOrWhiteSpace(o)).ToList());
+        JsonSerializer.Serialize(options.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).ToList());
 }
 
 public class FormFillViewModel
@@ -125,6 +139,9 @@ public class FormFillViewModel
     public string LessonTitle { get; set; } = string.Empty;
     public string LessonContext { get; set; } = string.Empty;
     public bool AlreadyResponded { get; set; }
+    public bool ShowResults { get; set; }
+    public int? ScoreCorrect { get; set; }
+    public int? ScoreGraded { get; set; }
     public List<FormFillQuestionViewModel> Questions { get; set; } = [];
 }
 
@@ -135,8 +152,14 @@ public class FormFillQuestionViewModel
     public FormQuestionType Type { get; set; }
     public bool IsRequired { get; set; }
     public IReadOnlyList<string> Options { get; set; } = [];
+    public IReadOnlyList<string> CorrectOptions { get; set; } = [];
     public string? TextValue { get; set; }
     public List<string> SelectedOptions { get; set; } = [];
+    public bool? IsCorrect { get; set; }
+    public string? FeedbackCorrect { get; set; }
+    public string? FeedbackIncorrect { get; set; }
+    public bool HasGrading => Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice
+                              && CorrectOptions.Count > 0;
 }
 
 public class FormResponsesViewModel
@@ -155,6 +178,8 @@ public class FormResponseRowViewModel
     public string StudentName { get; set; } = string.Empty;
     public DateTime SubmittedAtUtc { get; set; }
     public int AnsweredCount { get; set; }
+    public int? CorrectCount { get; set; }
+    public int? GradedCount { get; set; }
 }
 
 public class FormResponseDetailViewModel
@@ -172,4 +197,9 @@ public class FormAnswerDetailViewModel
     public string Prompt { get; set; } = string.Empty;
     public FormQuestionType Type { get; set; }
     public string DisplayValue { get; set; } = string.Empty;
+    public bool? IsCorrect { get; set; }
+    public IReadOnlyList<string> Options { get; set; } = [];
+    public IReadOnlyList<string> SelectedOptions { get; set; } = [];
+    public IReadOnlyList<string> CorrectOptions { get; set; } = [];
+    public string? FeedbackShown { get; set; }
 }

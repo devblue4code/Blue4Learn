@@ -32,6 +32,7 @@ else
                     <th>Estudante</th>
                     <th>Enviado em</th>
                     <th>Respostas</th>
+                    <th>Acertos</th>
                     <th></th>
                 </tr>
             </thead>
@@ -42,6 +43,16 @@ else
                         <td>@r.StudentName</td>
                         <td>@r.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                         <td>@r.AnsweredCount / @Model.QuestionCount</td>
+                        <td>
+                            @if (r.GradedCount is int g && g > 0)
+                            {
+                                <text>@r.CorrectCount / @g</text>
+                            }
+                            else
+                            {
+                                <text>—</text>
+                            }
+                        </td>
                         <td class="text-end">
                             <a asp-action="ResponseDetail" asp-route-id="@r.ResponseId">Ver</a>
                         </td>
