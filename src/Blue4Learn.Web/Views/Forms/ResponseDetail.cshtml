@@ -41,13 +41,17 @@
         @if (a.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice)
         {
             <ul class="list-unstyled mb-2">
-                @foreach (var opt in a.Options)
+                @for (var oi = 0; oi < a.Options.Count; oi++)
                 {
+                    var opt = a.Options[oi];
+                    var letter = oi < FormQuestionEditViewModel.ChoiceLetters.Length
+                        ? FormQuestionEditViewModel.ChoiceLetters[oi]
+                        : (oi + 1).ToString();
                     var selected = a.SelectedOptions.Contains(opt);
                     var isAnswer = a.CorrectOptions.Contains(opt);
                     var cls = isAnswer ? "form-option is-correct" : (selected ? "form-option is-incorrect" : "");
                     <li class="@cls py-1 px-2 mb-1 rounded">
-                        @(selected ? "●" : "○") @opt
+                        @(selected ? "●" : "○") <strong>@letter.</strong> @opt
                         @if (isAnswer)
                         {
                             <span class="small">(correta)</span>
