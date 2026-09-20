@@ -353,6 +353,23 @@ public class ContentController : Controller
 
         model.PreviewHtml ??= _markdown.ToSafeHtml(model.Markdown);
         model.ActivityPreviewHtml ??= _markdown.ToSafeHtml(model.ActivityPrompt);
+
+        if (model.Id is Guid lessonId)
+        {
+            model.LessonForms = await _db.CourseForms
+                .AsNoTracking()
+                .Where(f => f.LessonId == lessonId)
+                .OrderByDescending(f => f.UpdatedAtUtc)
+                .Select(f => new LessonFormSummaryViewModel
+                {
+                    Id = f.Id,
+                    Title = f.Title,
+                    IsPublished = f.IsPublished,
+                    QuestionCount = f.Questions.Count
+                })
+                .ToListAsync();
+        }
+
         return model;
     }
 

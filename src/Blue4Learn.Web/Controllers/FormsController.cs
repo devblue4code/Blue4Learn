@@ -220,8 +220,8 @@ public class FormsController : Controller
             CorrectOptionsJson = NeedsOptions(type)
                 ? FormQuestionEditViewModel.ToOptionsJson(["Opção 1"])
                 : "[]",
-            FeedbackCorrect = NeedsOptions(type) ? "Isso mesmo!" : null,
-            FeedbackIncorrect = NeedsOptions(type) ? "Revise a resposta e tente de novo." : null
+            FeedbackCorrect = "Isso mesmo!",
+            FeedbackIncorrect = "Revise a resposta e tente de novo."
         };
 
         _db.FormQuestions.Add(question);
@@ -278,6 +278,11 @@ public class FormsController : Controller
                 correct = correct.Take(1).ToList();
             }
         }
+        else if (IsTextType(model.Type) && correct.Count == 0)
+        {
+            TempData["Error"] = "Informe o gabarito (resposta correta) da pergunta.";
+            return RedirectToAction(nameof(Edit), new { id = form.Id });
+        }
 
         question.Prompt = model.Prompt.Trim();
         question.Type = model.Type;
@@ -285,15 +290,13 @@ public class FormsController : Controller
         question.OptionsJson = NeedsOptions(model.Type)
             ? FormQuestionEditViewModel.ToOptionsJson(model.Options)
             : "[]";
-        question.CorrectOptionsJson = NeedsOptions(model.Type)
-            ? FormQuestionEditViewModel.ToOptionsJson(correct)
-            : "[]";
-        question.FeedbackCorrect = NeedsOptions(model.Type)
-            ? (string.IsNullOrWhiteSpace(model.FeedbackCorrect) ? null : model.FeedbackCorrect.Trim())
-            : null;
-        question.FeedbackIncorrect = NeedsOptions(model.Type)
-            ? (string.IsNullOrWhiteSpace(model.FeedbackIncorrect) ? null : model.FeedbackIncorrect.Trim())
-            : null;
+        question.CorrectOptionsJson = FormQuestionEditViewModel.ToOptionsJson(correct);
+        question.FeedbackCorrect = string.IsNullOrWhiteSpace(model.FeedbackCorrect)
+            ? null
+            : model.FeedbackCorrect.Trim();
+        question.FeedbackIncorrect = string.IsNullOrWhiteSpace(model.FeedbackIncorrect)
+            ? null
+            : model.FeedbackIncorrect.Trim();
         form.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
@@ -497,7 +500,7 @@ public class FormsController : Controller
 
         if (await _access.IsTeacherOrAdminAsync(user))
         {
-            return RedirectToAction(nameof(Edit), new { id });
+            return RedirectToAction(nameof(Preview), new { id });
         }
 
         var form = await LoadPublishedFormForStudentAsync(user, id);
@@ -509,6 +512,22 @@ public class FormsController : Controller
             .FirstOrDefaultAsync(r => r.FormId == id && r.UserId == user.Id);
 
         return View(ToFillVm(form, existing));
+    }
+
+    /// <summary>Preview do formulário como o estudante vê (professora/admin).</summary>
+    [Authorize(Roles = $"{AppRoles.Teacher},{AppRoles.Admin}")]
+    [HttpGet]
+    public async Task<IActionResult> Preview(Guid id)
+    {
+        var user = await _access.GetCurrentUserAsync(User);
+        if (user is null) return Challenge();
+
+        var form = await LoadFormForTeacherAsync(user, id);
+        if (form is null) return NotFound();
+
+        var vm = ToFillVm(form, existing: null);
+        vm.IsTeacherPreview = true;
+        return View("Fill", vm);
     }
 
     [HttpPost]
@@ -589,11 +608,7 @@ public class FormsController : Controller
             var selected = question.Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice
                 ? NormalizeSelections(question, answer!)
                 : [];
-            bool? isCorrect = null;
-            if (NeedsOptions(question.Type))
-            {
-                isCorrect = EvaluateChoice(question, selected);
-            }
+            bool? isCorrect = EvaluateAnswer(question, answer, selected);
 
             _db.FormAnswers.Add(new FormAnswer
             {
@@ -690,6 +705,7 @@ public class FormsController : Controller
                 OptionsText = FormQuestionEditViewModel.OptionsToText(q.OptionsJson),
                 CorrectOptions = FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson).ToList(),
                 CorrectOptionSingle = FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson).FirstOrDefault(),
+                CorrectAnswerText = string.Join('\n', FormQuestionEditViewModel.ParseOptionsJson(q.CorrectOptionsJson)),
                 FeedbackCorrect = q.FeedbackCorrect,
                 FeedbackIncorrect = q.FeedbackIncorrect
             }).ToList()
@@ -744,25 +760,53 @@ public class FormsController : Controller
                 : [model.CorrectOptionSingle.Trim()];
         }
 
-        return (model.CorrectOptions ?? [])
-            .Where(c => !string.IsNullOrWhiteSpace(c))
+        if (model.Type == FormQuestionType.MultiChoice)
+        {
+            return (model.CorrectOptions ?? [])
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+        }
+
+        // ShortText / Paragraph: one accepted answer per line
+        return FormQuestionEditViewModel.ParseOptions(model.CorrectAnswerText)
             .Select(c => c.Trim())
-            .Distinct(StringComparer.Ordinal)
+            .Where(c => c.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    private static bool? EvaluateChoice(FormQuestion question, IReadOnlyList<string> selected)
+    private static bool? EvaluateAnswer(
+        FormQuestion question,
+        FormFillQuestionViewModel? answer,
+        IReadOnlyList<string> selected)
     {
         var correct = FormQuestionEditViewModel.ParseOptionsJson(question.CorrectOptionsJson);
         if (correct.Count == 0) return null;
 
-        var selectedSet = selected.ToHashSet(StringComparer.Ordinal);
-        var correctSet = correct.ToHashSet(StringComparer.Ordinal);
-        return selectedSet.SetEquals(correctSet);
+        if (NeedsOptions(question.Type))
+        {
+            var selectedSet = selected.ToHashSet(StringComparer.Ordinal);
+            var correctSet = correct.ToHashSet(StringComparer.Ordinal);
+            return selectedSet.SetEquals(correctSet);
+        }
+
+        if (IsTextType(question.Type))
+        {
+            var text = answer?.TextValue?.Trim() ?? string.Empty;
+            if (text.Length == 0) return false;
+            return correct.Any(c => string.Equals(c.Trim(), text, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return null;
     }
 
     private static bool NeedsOptions(FormQuestionType type) =>
         type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice;
+
+    private static bool IsTextType(FormQuestionType type) =>
+        type is FormQuestionType.ShortText or FormQuestionType.Paragraph;
 
     private static bool HasAnswer(FormQuestion question, FormFillQuestionViewModel? answer)
     {

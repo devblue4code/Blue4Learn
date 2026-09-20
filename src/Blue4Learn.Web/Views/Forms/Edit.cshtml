@@ -17,10 +17,11 @@
         <p class="eyebrow">@Model.LessonContext · @Model.LessonTitle · construtor</p>
         <h1>@Model.Title</h1>
         <p class="section-lead">
-            Monte as perguntas como no Forms. Tipos: texto curto, parágrafo, múltipla escolha e caixas de seleção.
+            Monte as perguntas como no Forms. Em todos os tipos, defina o <strong>gabarito</strong> e o feedback de acerto/erro.
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary" asp-action="Preview" asp-route-id="@Model.FormId">Preview como estudante</a>
         <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Lista da aula</a>
         <a class="btn btn-outline-primary" asp-action="Responses" asp-route-id="@Model.FormId">Respostas (@Model.ResponseCount)</a>
         <form asp-action="TogglePublish" method="post" class="d-inline">
@@ -171,21 +172,44 @@ else
                             }
                         </div>
                     }
+                }
+                else if (q.Type is FormQuestionType.ShortText or FormQuestionType.Paragraph)
+                {
+                    <input type="hidden" name="OptionsText" value="" />
                     <div class="mb-3">
-                        <label class="form-label" for="fb-ok-@q.Id">Feedback se acertar</label>
-                        <input id="fb-ok-@q.Id" name="FeedbackCorrect" class="form-control" value="@q.FeedbackCorrect"
-                               placeholder="Ex.: Isso mesmo!" maxlength="1000" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="fb-bad-@q.Id">Feedback se errar</label>
-                        <input id="fb-bad-@q.Id" name="FeedbackIncorrect" class="form-control" value="@q.FeedbackIncorrect"
-                               placeholder="Ex.: Revise e tente de novo." maxlength="1000" />
+                        <label class="form-label" for="correct-text-@q.Id">
+                            @(q.Type == FormQuestionType.ShortText ? "Resposta correta" : "Gabarito (resposta esperada)")
+                        </label>
+                        @if (q.Type == FormQuestionType.ShortText)
+                        {
+                            <input id="correct-text-@q.Id" name="CorrectAnswerText" class="form-control"
+                                   value="@q.CorrectAnswerText" maxlength="500"
+                                   placeholder="Texto exato aceito como correto" />
+                            <p class="small text-muted mb-0">Comparação sem diferenciar maiúsculas/minúsculas. Para aceitar mais de uma resposta, use uma por linha.</p>
+                        }
+                        else
+                        {
+                            <textarea id="correct-text-@q.Id" name="CorrectAnswerText" class="form-control" rows="3"
+                                      maxlength="4000" placeholder="Resposta modelo (ou alternativas, uma por linha)">@q.CorrectAnswerText</textarea>
+                            <p class="small text-muted mb-0">O aluno precisa bater no texto (ignora maiúsculas). Alternativas: uma por linha.</p>
+                        }
                     </div>
                 }
                 else
                 {
                     <input type="hidden" name="OptionsText" value="@q.OptionsText" />
                 }
+
+                <div class="mb-3">
+                    <label class="form-label" for="fb-ok-@q.Id">Feedback se acertar</label>
+                    <input id="fb-ok-@q.Id" name="FeedbackCorrect" class="form-control" value="@q.FeedbackCorrect"
+                           placeholder="Ex.: Isso mesmo!" maxlength="1000" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="fb-bad-@q.Id">Feedback se errar</label>
+                    <input id="fb-bad-@q.Id" name="FeedbackIncorrect" class="form-control" value="@q.FeedbackIncorrect"
+                           placeholder="Ex.: Revise e tente de novo." maxlength="1000" />
+                </div>
 
                 <button type="submit" class="btn btn-primary btn-sm">Salvar pergunta</button>
             </form>

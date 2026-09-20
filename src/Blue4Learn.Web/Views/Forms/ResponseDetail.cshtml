@@ -59,6 +59,12 @@
         else
         {
             <p class="mb-0">@a.DisplayValue</p>
+            @if (a.CorrectOptions.Count > 0)
+            {
+                <p class="small text-muted mt-2 mb-0">
+                    Gabarito: <strong>@string.Join(" · ", a.CorrectOptions)</strong>
+                </p>
+            }
         }
         @if (!string.IsNullOrWhiteSpace(a.FeedbackShown))
         {

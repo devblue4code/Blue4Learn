@@ -90,6 +90,10 @@ public class FormQuestionEditViewModel
     [Display(Name = "Resposta correta (texto exato de uma opção)")]
     public string? CorrectOptionSingle { get; set; }
 
+    /// <summary>Gabarito para texto curto/parágrafo (uma resposta aceita por linha).</summary>
+    [Display(Name = "Resposta(s) correta(s)")]
+    public string? CorrectAnswerText { get; set; }
+
     [StringLength(1000)]
     [Display(Name = "Feedback se acertar")]
     public string? FeedbackCorrect { get; set; }
@@ -139,6 +143,7 @@ public class FormFillViewModel
     public string LessonTitle { get; set; } = string.Empty;
     public string LessonContext { get; set; } = string.Empty;
     public bool AlreadyResponded { get; set; }
+    public bool IsTeacherPreview { get; set; }
     public bool ShowResults { get; set; }
     public int? ScoreCorrect { get; set; }
     public int? ScoreGraded { get; set; }
@@ -158,8 +163,7 @@ public class FormFillQuestionViewModel
     public bool? IsCorrect { get; set; }
     public string? FeedbackCorrect { get; set; }
     public string? FeedbackIncorrect { get; set; }
-    public bool HasGrading => Type is FormQuestionType.SingleChoice or FormQuestionType.MultiChoice
-                              && CorrectOptions.Count > 0;
+    public bool HasGrading => CorrectOptions.Count > 0;
 }
 
 public class FormResponsesViewModel
