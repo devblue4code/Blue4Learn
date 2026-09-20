@@ -24,9 +24,9 @@
         <span class="@BadgeClass(Model.JournalDone, Model.JournalNeedsAttention)" aria-hidden="true"></span>
     </a>
     <a class="@NavClass("activity")" asp-action="Activity" asp-route-id="@Model.LessonId"
-       title="@(Model.ActivityDone ? "Atividade concluída" : Model.ActivityStarted ? "Atividade em andamento" : "Atividade")">
-        <i class="bi bi-check2-square" aria-hidden="true"></i>
-        <span>Atividade</span>
+       title="@(Model.ActivityDone ? "Entrega concluída" : Model.ActivityStarted ? "Entrega em andamento" : "Entrega GitHub")">
+        <i class="bi bi-github" aria-hidden="true"></i>
+        <span>Entrega</span>
         @if (Model.Activity is not null)
         {
             <span class="@BadgeClass(Model.ActivityDone, started: Model.ActivityStarted && !Model.ActivityDone)" aria-hidden="true"></span>

@@ -1,0 +1,40 @@
+@model FormCreateViewModel
+@{
+    ViewData["Title"] = "Nova atividade";
+    ViewData["TopTitle"] = "Atividades";
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Construtor</p>
+        <h1>Nova atividade</h1>
+        <p class="section-lead">Vincule à disciplina. Depois você monta as perguntas.</p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Index">Voltar</a>
+</div>
+
+<form asp-action="Create" method="post" class="soft-panel" style="max-width: 640px">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <label asp-for="CourseId" class="form-label">Disciplina</label>
+        <select asp-for="CourseId" class="form-select">
+            <option value="">Selecione…</option>
+            @foreach (var c in Model.Courses)
+            {
+                <option value="@c.Id">@c.Title</option>
+            }
+        </select>
+        <span asp-validation-for="CourseId" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" placeholder="Ex.: Check-in da sprint 2" />
+        <span asp-validation-for="Title" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" rows="3"
+                  placeholder="Contexto opcional para o aluno"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Criar e montar perguntas</button>
+</form>

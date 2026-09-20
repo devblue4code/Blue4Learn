@@ -24,8 +24,8 @@
     {
         <section class="soft-panel ws-panel ws-page-form">
             <div class="ws-panel-head">
-                <h2>Atividade</h2>
-                <p>Esta aula ainda não tem atividade publicada.</p>
+                <h2>Entrega da aula</h2>
+                <p>Esta aula ainda não tem entrega publicada.</p>
             </div>
             <a class="btn btn-outline-primary" asp-action="Workspace" asp-route-id="@Model.LessonId">Voltar ao conteúdo</a>
         </section>
@@ -51,7 +51,7 @@
             <div class="ws-panel-head">
                 <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                     <div>
-                        <h2>Atividade prática</h2>
+                        <h2>Entrega via GitHub</h2>
                         <p>@activity.Title</p>
                     </div>
                     <span class="prog-chip @(isReviewed ? null : activity.Status == ActivityStatus.Submitted ? "is-warn" : "is-muted")">
@@ -87,8 +87,8 @@
             @if (activity.RequiresGitHubDelivery)
             {
                 <div class="callout mb-3">
-                    <strong>Entrega via GitHub</strong>
-                    <p class="mb-0">Informe o repositório. O Pull Request e um recado curto são opcionais.</p>
+                    <strong>Repositório obrigatório</strong>
+                    <p class="mb-0">Informe a URL do GitHub. O Pull Request e um recado curto são opcionais.</p>
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="GitHubUrl">URL do repositório <span class="text-danger">*</span></label>
@@ -106,21 +106,36 @@
                               placeholder="Ex.: branch feature/login, pendências conhecidas…" @(isReviewed ? "disabled" : null)>@activity.DeliveryNote</textarea>
                 </div>
             }
+            else
+            {
+                <div class="callout mb-3">
+                    <strong>Entrega sem GitHub obrigatório</strong>
+                    <p class="mb-0">Descreva o problema e a solução. Anexos ficam em Evidências.</p>
+                </div>
+            }
 
-            <div class="mb-3">
-                <label class="form-label" for="ProblemDescription">Descrição do problema</label>
-                <textarea id="ProblemDescription" name="ProblemDescription" class="form-control" rows="3"
-                          @(isReviewed ? "disabled" : null)>@activity.ProblemDescription</textarea>
-            </div>
-            <div class="mb-3">
-                <label class="form-label" for="SolutionDescription">Descrição da solução</label>
-                <textarea id="SolutionDescription" name="SolutionDescription" class="form-control" rows="3"
-                          @(isReviewed ? "disabled" : null)>@activity.SolutionDescription</textarea>
-            </div>
+            <details class="mb-3" @(string.IsNullOrWhiteSpace(activity.ProblemDescription) && string.IsNullOrWhiteSpace(activity.SolutionDescription) ? null : "open")>
+                <summary class="mb-2">Notas opcionais (problema / solução)</summary>
+                <div class="mb-3">
+                    <label class="form-label" for="ProblemDescription">Descrição do problema</label>
+                    <textarea id="ProblemDescription" name="ProblemDescription" class="form-control" rows="3"
+                              @(isReviewed ? "disabled" : null)>@activity.ProblemDescription</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="SolutionDescription">Descrição da solução</label>
+                    <textarea id="SolutionDescription" name="SolutionDescription" class="form-control" rows="3"
+                              @(isReviewed ? "disabled" : null)>@activity.SolutionDescription</textarea>
+                </div>
+            </details>
+
+            <p class="small text-muted mb-3">
+                Questionários da disciplina (estilo Forms) ficam em
+                <a asp-controller="Forms" asp-action="Index">Atividades</a>.
+            </p>
 
             @if (!isReviewed)
             {
-                <button type="submit" class="btn btn-primary">Salvar atividade</button>
+                <button type="submit" class="btn btn-primary">Salvar entrega</button>
             }
             else
             {

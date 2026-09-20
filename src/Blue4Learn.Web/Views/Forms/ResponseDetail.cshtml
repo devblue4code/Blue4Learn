@@ -1,0 +1,33 @@
+@model FormResponseDetailViewModel
+@{
+    ViewData["Title"] = Model.StudentName;
+    ViewData["TopTitle"] = "Atividades";
+    string TypeLabel(FormQuestionType t) => t switch
+    {
+        FormQuestionType.ShortText => "Texto curto",
+        FormQuestionType.Paragraph => "Parágrafo",
+        FormQuestionType.SingleChoice => "Múltipla escolha",
+        FormQuestionType.MultiChoice => "Caixas de seleção",
+        _ => t.ToString()
+    };
+}
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Model.FormTitle</p>
+        <h1>@Model.StudentName</h1>
+        <p class="section-lead">
+            @Model.StudentEmail · enviado em @Model.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+        </p>
+    </div>
+    <a class="btn btn-outline-primary" asp-action="Responses" asp-route-id="@Model.FormId">Voltar às respostas</a>
+</div>
+
+@foreach (var a in Model.Answers)
+{
+    <article class="soft-panel mb-3">
+        <p class="small text-muted mb-1">@TypeLabel(a.Type)</p>
+        <h2 class="h6">@a.Prompt</h2>
+        <p class="mb-0">@a.DisplayValue</p>
+    </article>
+}

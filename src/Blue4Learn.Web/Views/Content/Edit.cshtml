@@ -103,8 +103,8 @@
 
     <section class="soft-panel mb-3 pub-section">
         <div class="pub-section-head">
-            <h2>Atividade e evidência</h2>
-            <p>Enunciado que o aluno vê no Workspace para enviar a prática.</p>
+            <h2>Entrega da aula (GitHub)</h2>
+            <p>Enunciado da prática e entrega pelo repositório. Questionários da disciplina ficam em <strong>Atividades</strong>.</p>
         </div>
         <div class="editor-grid editor-grid--activity">
             <div class="editor-pane">
@@ -112,12 +112,12 @@
                     <label asp-for="ActivityPrompt" class="form-label h6 mb-0">Enunciado (Markdown)</label>
                 </div>
                 <textarea asp-for="ActivityPrompt" class="form-control markdown-input markdown-input--compact" id="ActivityPrompt" rows="10"
-                          placeholder="Pode usar Markdown: listas, **negrito**, `código`, blocos ``` ``` etc."></textarea>
-                <p class="small text-muted mt-1 mb-0">O enunciado é renderizado em Markdown na página da atividade do aluno.</p>
+                          placeholder="O que o aluno precisa entregar no repositório…"></textarea>
+                <p class="small text-muted mt-1 mb-0">O enunciado aparece na aba Atividade do workspace.</p>
                 <div class="form-check mt-3">
                     <input asp-for="RequiresGitHubDelivery" class="form-check-input" id="RequiresGitHubDelivery" />
                     <label asp-for="RequiresGitHubDelivery" class="form-check-label">
-                        Entrega via GitHub (repositório obrigatório; PR opcional)
+                        Exigir URL do repositório GitHub (recomendado)
                     </label>
                 </div>
             </div>
