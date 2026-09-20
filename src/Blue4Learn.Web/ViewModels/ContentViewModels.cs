@@ -64,7 +64,10 @@ public class LessonEditorViewModel
     [StringLength(2000)]
     public string? ActivityPrompt { get; set; }
 
-    [Display(Name = "Entrega via GitHub")]
+    [Display(Name = "Incluir entrega nesta aula")]
+    public bool HasDelivery { get; set; }
+
+    [Display(Name = "Exigir URL do repositório GitHub")]
     public bool RequiresGitHubDelivery { get; set; }
 
     [Display(Name = "Importar arquivo .md")]
