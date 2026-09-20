@@ -219,12 +219,12 @@ public class QuizAttempt
     public DateTime SubmittedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
-/// <summary>Formulário de atividade por disciplina (estilo Forms).</summary>
+/// <summary>Formulário de atividade por aula (estilo Forms).</summary>
 public class CourseForm
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid CourseId { get; set; }
-    public Course Course { get; set; } = null!;
+    public Guid LessonId { get; set; }
+    public Lesson Lesson { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public bool IsPublished { get; set; }

@@ -21,19 +21,24 @@ public class FormsController : Controller
         _access = access;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(Guid? lessonId = null)
     {
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
         var isTeacher = await _access.IsTeacherOrAdminAsync(user);
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var lessonIds = await GetAccessibleLessonIdsAsync(user);
 
         var query = _db.CourseForms
             .AsNoTracking()
-            .Include(f => f.Course)
+            .Include(f => f.Lesson).ThenInclude(l => l.Module).ThenInclude(m => m.Course)
             .Include(f => f.Questions)
-            .Where(f => courseIds.Contains(f.CourseId));
+            .Where(f => lessonIds.Contains(f.LessonId));
+
+        if (lessonId is Guid filterLesson && lessonIds.Contains(filterLesson))
+        {
+            query = query.Where(f => f.LessonId == filterLesson);
+        }
 
         if (!isTeacher)
         {
@@ -66,16 +71,28 @@ public class FormsController : Controller
                 .ToListAsync()).ToHashSet();
         }
 
+        string? filterTitle = null;
+        if (lessonId is Guid lid && lessonIds.Contains(lid))
+        {
+            filterTitle = await _db.Lessons.AsNoTracking()
+                .Where(l => l.Id == lid)
+                .Select(l => l.Title)
+                .FirstOrDefaultAsync();
+        }
+
         return View(new FormListViewModel
         {
             IsTeacher = isTeacher,
+            FilterLessonId = lessonId,
+            FilterLessonTitle = filterTitle,
             Forms = forms.Select(f => new FormListItemViewModel
             {
                 Id = f.Id,
                 Title = f.Title,
                 Description = f.Description,
-                CourseTitle = f.Course.Title,
-                CourseId = f.CourseId,
+                LessonTitle = f.Lesson.Title,
+                LessonContext = LessonContext(f.Lesson),
+                LessonId = f.LessonId,
                 IsPublished = f.IsPublished,
                 QuestionCount = f.Questions.Count,
                 ResponseCount = responseCounts.GetValueOrDefault(f.Id),
@@ -87,14 +104,16 @@ public class FormsController : Controller
 
     [Authorize(Roles = $"{AppRoles.Teacher},{AppRoles.Admin}")]
     [HttpGet]
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(Guid? lessonId = null)
     {
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
+        var lessons = await LoadLessonOptionsAsync(user);
         return View(new FormCreateViewModel
         {
-            Courses = await LoadCourseOptionsAsync(user)
+            LessonId = lessonId is Guid id && lessons.Any(l => l.Id == id) ? id : null,
+            Lessons = lessons
         });
     }
 
@@ -106,10 +125,10 @@ public class FormsController : Controller
         var user = await _access.GetCurrentUserAsync(User);
         if (user is null) return Challenge();
 
-        model.Courses = await LoadCourseOptionsAsync(user);
-        if (!model.Courses.Any(c => c.Id == model.CourseId))
+        model.Lessons = await LoadLessonOptionsAsync(user);
+        if (model.LessonId is not Guid lessonId || !model.Lessons.Any(l => l.Id == lessonId))
         {
-            ModelState.AddModelError(nameof(model.CourseId), "Disciplina inválida.");
+            ModelState.AddModelError(nameof(model.LessonId), "Aula inválida.");
         }
 
         if (!ModelState.IsValid)
@@ -119,7 +138,7 @@ public class FormsController : Controller
 
         var form = new CourseForm
         {
-            CourseId = model.CourseId,
+            LessonId = model.LessonId!.Value,
             Title = model.Title.Trim(),
             Description = model.Description?.Trim() ?? string.Empty,
             IsPublished = false
@@ -356,7 +375,8 @@ public class FormsController : Controller
         {
             FormId = form.Id,
             Title = form.Title,
-            CourseTitle = form.Course.Title,
+            LessonTitle = form.Lesson.Title,
+            LessonContext = LessonContext(form.Lesson),
             QuestionCount = form.Questions.Count,
             Responses = responses.Select(r => new FormResponseRowViewModel
             {
@@ -377,15 +397,15 @@ public class FormsController : Controller
         var response = await _db.FormResponses
             .AsNoTracking()
             .Include(r => r.User)
-            .Include(r => r.Form).ThenInclude(f => f.Course)
+            .Include(r => r.Form).ThenInclude(f => f.Lesson).ThenInclude(l => l.Module).ThenInclude(m => m.Course)
             .Include(r => r.Form).ThenInclude(f => f.Questions)
             .Include(r => r.Answers)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (response is null) return NotFound();
 
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
-        if (!courseIds.Contains(response.Form.CourseId))
+        var lessonIds = await GetAccessibleLessonIdsAsync(user);
+        if (!lessonIds.Contains(response.Form.LessonId))
         {
             return Forbid();
         }
@@ -527,45 +547,69 @@ public class FormsController : Controller
 
         await _db.SaveChangesAsync();
         TempData["Success"] = "Respostas enviadas. Obrigado!";
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { lessonId = form.LessonId });
     }
 
-    private async Task<IReadOnlyList<FormCourseOptionViewModel>> LoadCourseOptionsAsync(ApplicationUser user)
+    private async Task<IReadOnlyList<Guid>> GetAccessibleLessonIdsAsync(ApplicationUser user)
     {
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
-        return await _db.Courses
+        var classGroupIds = await _access.GetAccessibleClassGroupIdsAsync(user);
+        var canPreviewDrafts = await _access.IsTeacherOrAdminAsync(user);
+
+        return await _db.Lessons
             .AsNoTracking()
-            .Where(c => courseIds.Contains(c.Id))
-            .OrderBy(c => c.Title)
-            .Select(c => new FormCourseOptionViewModel { Id = c.Id, Title = c.Title })
+            .Where(l => classGroupIds.Contains(l.ClassGroupId)
+                        && (l.Status == ContentStatus.Published
+                            || (canPreviewDrafts && l.Status != ContentStatus.Archived)))
+            .Select(l => l.Id)
+            .ToListAsync();
+    }
+
+    private async Task<IReadOnlyList<FormLessonOptionViewModel>> LoadLessonOptionsAsync(ApplicationUser user)
+    {
+        var classGroupIds = await _access.GetAccessibleClassGroupIdsAsync(user);
+        return await _db.Lessons
+            .AsNoTracking()
+            .Where(l => classGroupIds.Contains(l.ClassGroupId) && l.Status != ContentStatus.Archived)
+            .OrderBy(l => l.Module.Course.Title)
+            .ThenBy(l => l.Module.SortOrder)
+            .ThenBy(l => l.SortOrder)
+            .Select(l => new FormLessonOptionViewModel
+            {
+                Id = l.Id,
+                Label = l.Module.Course.Title + " · " + l.Module.Title + " · " + l.Title
+            })
             .ToListAsync();
     }
 
     private async Task<CourseForm?> LoadFormForTeacherAsync(ApplicationUser user, Guid id)
     {
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var lessonIds = await GetAccessibleLessonIdsAsync(user);
         return await _db.CourseForms
-            .Include(f => f.Course)
+            .Include(f => f.Lesson).ThenInclude(l => l.Module).ThenInclude(m => m.Course)
             .Include(f => f.Questions)
             .Include(f => f.Responses)
-            .FirstOrDefaultAsync(f => f.Id == id && courseIds.Contains(f.CourseId));
+            .FirstOrDefaultAsync(f => f.Id == id && lessonIds.Contains(f.LessonId));
     }
 
     private async Task<CourseForm?> LoadPublishedFormForStudentAsync(ApplicationUser user, Guid id)
     {
-        var courseIds = await _access.GetAccessibleCourseIdsAsync(user);
+        var lessonIds = await GetAccessibleLessonIdsAsync(user);
         return await _db.CourseForms
             .AsNoTracking()
-            .Include(f => f.Course)
+            .Include(f => f.Lesson).ThenInclude(l => l.Module).ThenInclude(m => m.Course)
             .Include(f => f.Questions)
-            .FirstOrDefaultAsync(f => f.Id == id && f.IsPublished && courseIds.Contains(f.CourseId));
+            .FirstOrDefaultAsync(f => f.Id == id && f.IsPublished && lessonIds.Contains(f.LessonId));
     }
+
+    private static string LessonContext(Lesson lesson) =>
+        $"{lesson.Module.Course.Title} · {lesson.Module.Title}";
 
     private static FormBuilderViewModel ToBuilderVm(CourseForm form) => new()
     {
         FormId = form.Id,
-        CourseId = form.CourseId,
-        CourseTitle = form.Course.Title,
+        LessonId = form.LessonId,
+        LessonTitle = form.Lesson.Title,
+        LessonContext = LessonContext(form.Lesson),
         Title = form.Title,
         Description = form.Description,
         IsPublished = form.IsPublished,
@@ -589,9 +633,11 @@ public class FormsController : Controller
         return new FormFillViewModel
         {
             FormId = form.Id,
+            LessonId = form.LessonId,
             Title = form.Title,
             Description = form.Description,
-            CourseTitle = form.Course.Title,
+            LessonTitle = form.Lesson.Title,
+            LessonContext = LessonContext(form.Lesson),
             AlreadyResponded = existing is not null,
             Questions = form.Questions.OrderBy(q => q.SortOrder).Select(q =>
             {

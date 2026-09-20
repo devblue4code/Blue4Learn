@@ -14,14 +14,14 @@
 
 <div class="page-header">
     <div>
-        <p class="eyebrow">@Model.CourseTitle · construtor</p>
+        <p class="eyebrow">@Model.LessonContext · @Model.LessonTitle · construtor</p>
         <h1>@Model.Title</h1>
         <p class="section-lead">
             Monte as perguntas como no Forms. Tipos: texto curto, parágrafo, múltipla escolha e caixas de seleção.
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <a class="btn btn-outline-primary" asp-action="Index">Lista</a>
+        <a class="btn btn-outline-primary" asp-action="Index" asp-route-lessonId="@Model.LessonId">Lista da aula</a>
         <a class="btn btn-outline-primary" asp-action="Responses" asp-route-id="@Model.FormId">Respostas (@Model.ResponseCount)</a>
         <form asp-action="TogglePublish" method="post" class="d-inline">
             @Html.AntiForgeryToken()
@@ -36,7 +36,7 @@
 <form asp-action="SaveMeta" method="post" class="soft-panel mb-3">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="FormId" />
-    <input type="hidden" asp-for="CourseId" />
+    <input type="hidden" asp-for="LessonId" />
     <div class="row g-3">
         <div class="col-md-8">
             <label asp-for="Title" class="form-label">Título</label>

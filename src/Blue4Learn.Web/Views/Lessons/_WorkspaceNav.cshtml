@@ -32,6 +32,11 @@
             <span class="@BadgeClass(Model.ActivityDone, started: Model.ActivityStarted && !Model.ActivityDone)" aria-hidden="true"></span>
         }
     </a>
+    <a class="ws-side-link" asp-controller="Forms" asp-action="Index" asp-route-lessonId="@Model.LessonId"
+       title="Questionários desta aula">
+        <i class="bi bi-ui-checks" aria-hidden="true"></i>
+        <span>Questionário</span>
+    </a>
     <a class="@NavClass("evidence")" asp-action="Evidence" asp-route-id="@Model.LessonId"
        title="@(Model.EvidenceDone ? "Evidência enviada" : "Evidências")">
         <i class="bi bi-paperclip" aria-hidden="true"></i>

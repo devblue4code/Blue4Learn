@@ -6,18 +6,41 @@
 
 <div class="page-header">
     <div>
-        <p class="eyebrow">@(Model.IsTeacher ? "Construção" : "Participação")</p>
+        <p class="eyebrow">@(Model.IsTeacher ? "Por aula" : "Participação")</p>
         <h1>Atividades</h1>
         <p class="section-lead">
-            @(Model.IsTeacher
-                ? "Crie formulários por disciplina — perguntas no estilo Forms para a turma responder."
-                : "Responda às atividades publicadas nas suas disciplinas.")
+            @if (!string.IsNullOrWhiteSpace(Model.FilterLessonTitle))
+            {
+                <text>Questionários da aula <strong>@Model.FilterLessonTitle</strong>.</text>
+            }
+            else if (Model.IsTeacher)
+            {
+                <text>Crie formulários vinculados a uma aula — perguntas no estilo Forms.</text>
+            }
+            else
+            {
+                <text>Responda às atividades publicadas nas suas aulas.</text>
+            }
         </p>
     </div>
-    @if (Model.IsTeacher)
-    {
-        <a class="btn btn-primary" asp-action="Create">Nova atividade</a>
-    }
+    <div class="d-flex gap-2 flex-wrap">
+        @if (Model.FilterLessonId is Guid lid)
+        {
+            <a class="btn btn-outline-primary" asp-action="Index">Todas as aulas</a>
+            @if (Model.IsTeacher)
+            {
+                <a class="btn btn-primary" asp-action="Create" asp-route-lessonId="@lid">Nova nesta aula</a>
+            }
+            else
+            {
+                <a class="btn btn-outline-primary" asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lid">Abrir aula</a>
+            }
+        }
+        else if (Model.IsTeacher)
+        {
+            <a class="btn btn-primary" asp-action="Create">Nova atividade</a>
+        }
+    </div>
 </div>
 
 @if (!Model.Forms.Any())
@@ -26,12 +49,12 @@
         <h3>@(Model.IsTeacher ? "Nenhuma atividade ainda" : "Nada publicado no momento")</h3>
         <p class="mb-0 text-muted">
             @(Model.IsTeacher
-                ? "Crie a primeira e monte as perguntas no construtor."
-                : "Quando a professora publicar, as atividades aparecem aqui.")
+                ? "Crie a primeira vinculada a uma aula e monte as perguntas."
+                : "Quando a professora publicar um questionário na aula, ele aparece aqui.")
         </p>
         @if (Model.IsTeacher)
         {
-            <a class="btn btn-primary mt-3" asp-action="Create">Criar atividade</a>
+            <a class="btn btn-primary mt-3" asp-action="Create" asp-route-lessonId="@Model.FilterLessonId">Criar atividade</a>
         }
     </div>
 }
@@ -45,9 +68,10 @@ else
                     <span class="prog-chip @(form.IsPublished ? null : "is-muted")">
                         @(form.IsPublished ? "Publicada" : "Rascunho")
                     </span>
-                    <span class="small text-muted">@form.CourseTitle</span>
+                    <span class="small text-muted">@form.LessonContext</span>
                 </div>
                 <h2 class="h5">@form.Title</h2>
+                <p class="small mb-1"><strong>Aula:</strong> @form.LessonTitle</p>
                 @if (!string.IsNullOrWhiteSpace(form.Description))
                 {
                     <p class="text-muted">@form.Description</p>
