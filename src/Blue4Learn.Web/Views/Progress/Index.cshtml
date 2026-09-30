@@ -131,8 +131,10 @@
     else
     {
         <div class="lesson-list prog-list">
+            @{ var lessonNumber = 0; }
             @foreach (var item in Model.Items)
             {
+                lessonNumber++;
                 var statusClass = !item.HasJournal
                     ? "is-missing"
                     : (item.NeedsReview || item.HasOpenQuestion ? "is-review" : "is-done");
@@ -141,7 +143,7 @@
                    asp-controller="Lessons"
                    asp-action="Workspace"
                    asp-route-id="@item.LessonId">
-                    <span class="lesson-order">@item.SortOrder</span>
+                    <span class="lesson-order">@lessonNumber</span>
                     <span class="lesson-meta">
                         <strong>
                             @item.Title

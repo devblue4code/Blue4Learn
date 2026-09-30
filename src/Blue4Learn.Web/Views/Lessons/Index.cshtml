@@ -14,10 +14,12 @@
 </div>
 
 <div class="lesson-list">
+@{ var lessonNumber = 0; }
 @foreach (var lesson in Model)
 {
+    lessonNumber++;
     <a class="lesson-row" asp-action="Workspace" asp-route-id="@lesson.Id">
-        <span class="lesson-order">@lesson.SortOrder</span>
+        <span class="lesson-order">@lessonNumber</span>
         <span class="lesson-meta">
             <strong>@lesson.Title</strong>
             <small>@lesson.ModuleTitle · @lesson.Objective</small>

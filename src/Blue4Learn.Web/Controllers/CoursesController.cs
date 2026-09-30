@@ -62,6 +62,8 @@ public class CoursesController : Controller
             });
         }
 
+        var classId = classGroup?.Id;
+        var canManage = await _access.CanManageContentAsync(user);
         var modules = await _db.Modules
             .AsNoTracking()
             .Where(m => m.CourseId == course.Id)
@@ -72,6 +74,9 @@ public class CoursesController : Controller
                 Title = m.Title,
                 SortOrder = m.SortOrder,
                 Lessons = m.Lessons
+                    .Where(l =>
+                        (classId == null || l.ClassGroupId == classId) &&
+                        (canManage || l.Status == ContentStatus.Published))
                     .OrderBy(l => l.SortOrder)
                     .Select(l => new SyllabusLessonViewModel
                     {
@@ -84,6 +89,18 @@ public class CoursesController : Controller
                     .ToList()
             })
             .ToListAsync();
+
+        if (!canManage)
+        {
+            var display = 0;
+            foreach (var module in modules)
+            {
+                foreach (var lesson in module.Lessons)
+                {
+                    lesson.SortOrder = ++display;
+                }
+            }
+        }
 
         var syllabusMarkdown = !string.IsNullOrWhiteSpace(course.Syllabus)
             ? course.Syllabus
@@ -113,6 +130,7 @@ public class CoursesController : Controller
         if (!await _access.CanManageContentAsync(user)) return Forbid();
 
         var course = await _context.ResolveCourseAsync(user, courseId);
+        var classGroup = await _context.ResolveClassAsync(user);
 
         if (course is null)
         {
@@ -122,6 +140,7 @@ public class CoursesController : Controller
             });
         }
 
+        var classId = classGroup?.Id;
         var modules = await _db.Modules
             .AsNoTracking()
             .Where(m => m.CourseId == course.Id)
@@ -131,8 +150,9 @@ public class CoursesController : Controller
                 Id = m.Id,
                 Title = m.Title,
                 SortOrder = m.SortOrder,
-                LessonCount = m.Lessons.Count,
+                LessonCount = m.Lessons.Count(l => classId == null || l.ClassGroupId == classId),
                 Lessons = m.Lessons
+                    .Where(l => classId == null || l.ClassGroupId == classId)
                     .OrderBy(l => l.SortOrder)
                     .Select(l => new SyllabusLessonViewModel
                     {
