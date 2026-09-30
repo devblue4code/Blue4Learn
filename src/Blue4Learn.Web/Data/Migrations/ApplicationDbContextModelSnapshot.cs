@@ -487,6 +487,15 @@ namespace Blue4Learn.Web.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("ClassGroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LessonDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ModuleId")
                         .HasColumnType("TEXT");
 
@@ -512,7 +521,13 @@ namespace Blue4Learn.Web.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModuleId", "Slug")
+                    b.HasIndex("ModuleId");
+
+                    b.HasIndex("ClassGroupId", "CreatedAtUtc");
+
+                    b.HasIndex("ClassGroupId", "SortOrder");
+
+                    b.HasIndex("ClassGroupId", "ModuleId", "Slug")
                         .IsUnique();
 
                     b.ToTable("Lessons");

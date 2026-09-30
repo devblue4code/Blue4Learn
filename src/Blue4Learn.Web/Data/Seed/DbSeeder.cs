@@ -363,10 +363,8 @@ public static class DbSeeder
         foreach (var classId in classIds)
         {
             var lessons = await db.Lessons
-                .Include(l => l.Module)
                 .Where(l => l.ClassGroupId == classId)
-                .OrderBy(l => l.Module.SortOrder)
-                .ThenBy(l => l.SortOrder)
+                .OrderBy(l => l.CreatedAtUtc)
                 .ThenBy(l => l.Title)
                 .ToListAsync();
 

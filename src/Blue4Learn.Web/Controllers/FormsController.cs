@@ -670,7 +670,7 @@ public class FormsController : Controller
             .AsNoTracking()
             .Where(l => classGroupIds.Contains(l.ClassGroupId) && l.Status != ContentStatus.Archived)
             .OrderBy(l => l.Module.Course.Title)
-            .ThenBy(l => l.Module.SortOrder)
+            .ThenBy(l => l.CreatedAtUtc)
             .ThenBy(l => l.SortOrder)
             .Select(l => new FormLessonOptionViewModel
             {

@@ -325,7 +325,8 @@ public sealed class LearningProgressService : ILearningProgressService
             .AsNoTracking()
             .Include(l => l.Activities)
             .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId))
-            .OrderBy(l => l.SortOrder)
+            .OrderBy(l => l.CreatedAtUtc)
+            .ThenBy(l => l.SortOrder)
             .ToListAsync();
 
         if (lessons.Count == 0)
@@ -511,7 +512,8 @@ public sealed class LearningProgressService : ILearningProgressService
             .AsNoTracking()
             .Include(l => l.Activities)
             .Where(l => l.ClassGroupId == classGroupId && l.Status == ContentStatus.Published)
-            .OrderBy(l => l.SortOrder)
+            .OrderBy(l => l.CreatedAtUtc)
+            .ThenBy(l => l.SortOrder)
             .ToListAsync();
     }
 

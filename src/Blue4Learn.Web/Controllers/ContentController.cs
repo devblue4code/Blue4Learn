@@ -52,7 +52,7 @@ public class ContentController : Controller
         var lessons = await _db.Lessons
             .AsNoTracking()
             .Where(l => l.ClassGroupId == classGroup.Id)
-            .OrderBy(l => l.Module.SortOrder)
+            .OrderBy(l => l.CreatedAtUtc)
             .ThenBy(l => l.SortOrder)
             .Select(l => new ContentLessonItemViewModel
             {
@@ -239,7 +239,11 @@ public class ContentController : Controller
         }
         else
         {
-            lesson = new Lesson { ClassGroupId = classGroup!.Id };
+            lesson = new Lesson
+            {
+                ClassGroupId = classGroup!.Id,
+                CreatedAtUtc = DateTime.UtcNow
+            };
             _db.Lessons.Add(lesson);
         }
 

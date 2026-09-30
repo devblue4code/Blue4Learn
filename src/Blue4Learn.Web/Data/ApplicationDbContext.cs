@@ -86,6 +86,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(x => x.ModuleId);
             e.HasIndex(x => new { x.ClassGroupId, x.ModuleId, x.Slug }).IsUnique();
             e.HasIndex(x => new { x.ClassGroupId, x.SortOrder });
+            e.HasIndex(x => new { x.ClassGroupId, x.CreatedAtUtc });
             e.Property(x => x.Title).HasMaxLength(200);
             e.Property(x => x.Slug).HasMaxLength(100);
             e.HasOne(x => x.ClassGroup)
