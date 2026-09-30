@@ -46,7 +46,8 @@ public class LessonsController : Controller
             .Include(l => l.Module)
             .Include(l => l.JournalEntries)
             .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId))
-            .OrderBy(l => l.SortOrder)
+            .OrderBy(l => l.CreatedAtUtc)
+            .ThenBy(l => l.SortOrder)
             .Select(l => new LessonSummaryViewModel
             {
                 Id = l.Id,
@@ -115,8 +116,9 @@ public class LessonsController : Controller
                 l.ModuleId == lesson.ModuleId &&
                 l.ClassGroupId == lesson.ClassGroupId &&
                 (l.Status == ContentStatus.Published || canPreviewDrafts && l.Status != ContentStatus.Archived))
-            .OrderBy(l => l.SortOrder)
-            .Select(l => new { l.Id, l.SortOrder })
+            .OrderBy(l => l.CreatedAtUtc)
+            .ThenBy(l => l.SortOrder)
+            .Select(l => new { l.Id, l.CreatedAtUtc, l.SortOrder })
             .ToListAsync();
 
         var journal = await _db.StudentJournalEntries
@@ -136,6 +138,7 @@ public class LessonsController : Controller
         var publishedCount = siblings.Count;
         var journalCount = await _db.StudentJournalEntries
             .CountAsync(j => j.UserId == user.Id && siblings.Select(s => s.Id).Contains(j.LessonId));
+        var siblingIndex = siblings.FindIndex(s => s.Id == lesson.Id);
 
         var vm = new LessonWorkspaceViewModel
         {
@@ -145,8 +148,8 @@ public class LessonsController : Controller
             ModuleTitle = lesson.Module.Title,
             CourseTitle = lesson.Module.Course.Title,
             ContentHtml = _markdown.ToSafeHtml(lesson.ContentDocument?.Markdown),
-            PreviousLessonId = siblings.LastOrDefault(s => s.SortOrder < lesson.SortOrder)?.Id,
-            NextLessonId = siblings.FirstOrDefault(s => s.SortOrder > lesson.SortOrder)?.Id,
+            PreviousLessonId = siblingIndex > 0 ? siblings[siblingIndex - 1].Id : null,
+            NextLessonId = siblingIndex >= 0 && siblingIndex < siblings.Count - 1 ? siblings[siblingIndex + 1].Id : null,
             ProgressPercent = publishedCount == 0 ? 0 : (int)Math.Round(100.0 * journalCount / publishedCount),
             ModuleLessonCount = publishedCount,
             RegisteredInModule = journalCount,

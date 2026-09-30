@@ -39,7 +39,7 @@ public class ProgressController : Controller
             .Include(l => l.Module)
             .Include(l => l.Activities)
             .Where(l => l.Status == ContentStatus.Published && courseIds.Contains(l.Module.CourseId))
-            .OrderBy(l => l.Module.SortOrder)
+            .OrderBy(l => l.CreatedAtUtc)
             .ThenBy(l => l.SortOrder)
             .ToListAsync();
 

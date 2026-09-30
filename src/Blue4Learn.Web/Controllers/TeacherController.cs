@@ -134,7 +134,8 @@ public class TeacherController : Controller
             var journalCount = studentJournals.Count;
             var focusLessonId = studentJournals
                 .Where(j => j.NeedsReview || j.Questions.Any(q => q.Status == QuestionStatus.Open))
-                .OrderBy(j => j.Lesson.SortOrder)
+                .OrderBy(j => j.Lesson.CreatedAtUtc)
+                .ThenBy(j => j.Lesson.SortOrder)
                 .Select(j => (Guid?)j.LessonId)
                 .FirstOrDefault()
                 ?? studentJournals
@@ -552,7 +553,8 @@ public class TeacherController : Controller
                 .AsNoTracking()
                 .Include(l => l.Activities)
                 .Where(l => l.ClassGroupId == classGroup.Id && l.Status == ContentStatus.Published)
-                .OrderBy(l => l.SortOrder)
+                .OrderBy(l => l.CreatedAtUtc)
+                .ThenBy(l => l.SortOrder)
                 .ToListAsync();
 
         var journals = await _db.StudentJournalEntries
@@ -562,7 +564,8 @@ public class TeacherController : Controller
             .Include(j => j.Questions)
             .Include(j => j.ConceptMarks).ThenInclude(m => m.Concept)
             .Where(j => j.UserId == id && courseIds.Contains(j.Lesson.Module.CourseId))
-            .OrderBy(j => j.Lesson.SortOrder)
+            .OrderBy(j => j.Lesson.CreatedAtUtc)
+            .ThenBy(j => j.Lesson.SortOrder)
             .ToListAsync();
 
         var lessonIds = lessons.Select(l => l.Id).ToList();

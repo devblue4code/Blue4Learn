@@ -95,7 +95,8 @@ public class HomeController : Controller
             .Where(l => l.Status == ContentStatus.Published && classGroupIds.Contains(l.ClassGroupId));
 
         var lessonsData = await lessonsQuery
-            .OrderBy(l => l.SortOrder)
+            .OrderBy(l => l.CreatedAtUtc)
+            .ThenBy(l => l.SortOrder)
             .ToListAsync();
 
         var lessonIds = lessonsData.Select(l => l.Id).ToList();

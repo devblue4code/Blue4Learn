@@ -52,6 +52,7 @@ public class Lesson
     public string Objective { get; set; } = string.Empty;
     public int SortOrder { get; set; }
     public ContentStatus Status { get; set; } = ContentStatus.Draft;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LessonDate { get; set; }
     public ContentDocument? ContentDocument { get; set; }
     public ICollection<Concept> Concepts { get; set; } = [];

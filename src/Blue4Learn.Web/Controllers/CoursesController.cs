@@ -77,7 +77,8 @@ public class CoursesController : Controller
                     .Where(l =>
                         (selectedClassId == null || l.ClassGroupId == selectedClassId) &&
                         (canManage || l.Status == ContentStatus.Published))
-                    .OrderBy(l => l.SortOrder)
+                    .OrderBy(l => l.CreatedAtUtc)
+                    .ThenBy(l => l.SortOrder)
                     .Select(l => new SyllabusLessonViewModel
                     {
                         Id = l.Id,
@@ -153,7 +154,8 @@ public class CoursesController : Controller
                 LessonCount = m.Lessons.Count(l => classId == null || l.ClassGroupId == classId),
                 Lessons = m.Lessons
                     .Where(l => classId == null || l.ClassGroupId == classId)
-                    .OrderBy(l => l.SortOrder)
+                    .OrderBy(l => l.CreatedAtUtc)
+                    .ThenBy(l => l.SortOrder)
                     .Select(l => new SyllabusLessonViewModel
                     {
                         Id = l.Id,
