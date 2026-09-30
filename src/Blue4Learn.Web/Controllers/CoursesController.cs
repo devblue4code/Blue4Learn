@@ -62,7 +62,7 @@ public class CoursesController : Controller
             });
         }
 
-        var classId = classGroup?.Id;
+        var selectedClassId = classGroup?.Id;
         var canManage = await _access.CanManageContentAsync(user);
         var modules = await _db.Modules
             .AsNoTracking()
@@ -75,7 +75,7 @@ public class CoursesController : Controller
                 SortOrder = m.SortOrder,
                 Lessons = m.Lessons
                     .Where(l =>
-                        (classId == null || l.ClassGroupId == classId) &&
+                        (selectedClassId == null || l.ClassGroupId == selectedClassId) &&
                         (canManage || l.Status == ContentStatus.Published))
                     .OrderBy(l => l.SortOrder)
                     .Select(l => new SyllabusLessonViewModel
