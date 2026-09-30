@@ -159,11 +159,13 @@
     else
     {
         <div class="lesson-list">
+            @{ var lessonNumber = 0; }
             @foreach (var lesson in Model.RecentLessons)
             {
+                lessonNumber++;
                 <a class="lesson-row @(lesson.IsNext ? "is-next" : "")"
                    asp-controller="Lessons" asp-action="Workspace" asp-route-id="@lesson.Id">
-                    <span class="lesson-order">@lesson.SortOrder</span>
+                    <span class="lesson-order">@lessonNumber</span>
                     <span class="lesson-meta">
                         <strong>
                             @lesson.Title

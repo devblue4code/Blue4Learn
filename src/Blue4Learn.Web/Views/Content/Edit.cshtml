@@ -41,13 +41,13 @@
                 @if (Model.IsEdit)
                 {
                     <input asp-for="SortOrder" class="form-control" readonly />
-                    <p class="small text-muted mb-0">Definida automaticamente na criação.</p>
+                    <p class="small text-muted mb-0">Definida automaticamente na criação (rascunho ou publicada).</p>
                 }
                 else
                 {
                     <input type="hidden" asp-for="SortOrder" />
-                    <input class="form-control" value="Automática (próxima do módulo)" disabled />
-                    <p class="small text-muted mb-0">A ordem será a próxima disponível no módulo.</p>
+                    <input class="form-control" value="@($"#{Model.SortOrder} — próxima da turma")" disabled />
+                    <p class="small text-muted mb-0">Inclui rascunhos; a ordem fica fixa ao salvar.</p>
                 }
             </div>
             <div class="col-md-6">

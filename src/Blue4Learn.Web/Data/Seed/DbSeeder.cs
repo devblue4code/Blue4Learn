@@ -32,6 +32,7 @@ public static class DbSeeder
             await EnrichCourseDescriptionAsync(db);
             await EnsureCourseTeachersAsync(db, userManager);
             await EnsureDemoLocalAccountsAsync(db, userManager);
+            await NormalizeLessonSortOrdersAsync(db);
             return;
         }
 
@@ -130,6 +131,7 @@ public static class DbSeeder
 
         await db.SaveChangesAsync();
         await EnsureDemoQuizAsync(db);
+        await NormalizeLessonSortOrdersAsync(db);
     }
 
     private static async Task EnsureCourseTeachersAsync(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
@@ -336,6 +338,53 @@ public static class DbSeeder
         }
 
         return user;
+    }
+
+    /// <summary>
+    /// Garante IDs/ordem 1..N por turma (inclui rascunhos), sem buracos nem duplicatas.
+    /// </summary>
+    private static async Task NormalizeLessonSortOrdersAsync(ApplicationDbContext db)
+    {
+        var junk = await db.Lessons
+            .Where(l => l.Title == "TESTE Ordem Rascunho Auto")
+            .ToListAsync();
+        if (junk.Count > 0)
+        {
+            db.Lessons.RemoveRange(junk);
+            await db.SaveChangesAsync();
+        }
+
+        var classIds = await db.Lessons
+            .Select(l => l.ClassGroupId)
+            .Distinct()
+            .ToListAsync();
+
+        var changed = false;
+        foreach (var classId in classIds)
+        {
+            var lessons = await db.Lessons
+                .Include(l => l.Module)
+                .Where(l => l.ClassGroupId == classId)
+                .OrderBy(l => l.Module.SortOrder)
+                .ThenBy(l => l.SortOrder)
+                .ThenBy(l => l.Title)
+                .ToListAsync();
+
+            for (var i = 0; i < lessons.Count; i++)
+            {
+                var expected = i + 1;
+                if (lessons[i].SortOrder != expected)
+                {
+                    lessons[i].SortOrder = expected;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed || junk.Count > 0)
+        {
+            await db.SaveChangesAsync();
+        }
     }
 
     private static Lesson CreateLesson(

@@ -46,7 +46,7 @@ public class LessonEditorViewModel
     [Display(Name = "Objetivo")]
     public string Objective { get; set; } = string.Empty;
 
-    [Range(0, 999)]
+    [Range(1, 999)]
     [Display(Name = "Ordem")]
     public int SortOrder { get; set; }
 
